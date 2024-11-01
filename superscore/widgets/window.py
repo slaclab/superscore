@@ -157,6 +157,9 @@ class Window(Display, QtWidgets.QMainWindow):
             if isinstance(entry, Snapshot):
                 restore_page_action = self.menu.addAction('Inspect values')
                 restore_page_action.triggered.connect(partial(self.open_restore_page, entry))
+                if self.tab_widget.currentWidget():
+                    # compare selected to current
+                    pass
         self.menu.exec_(self.tree_view.mapToGlobal(pos))
 
     def closeEvent(self, a0: QCloseEvent) -> None:
