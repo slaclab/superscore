@@ -280,13 +280,14 @@ class FilestoreBackend(_Backend):
         with self._load_and_store_context() as db:
             db.pop(entry.uuid, None)
 
-    def search(self, *search_terms: SearchTermType) -> Generator[Entry, None, None]:
+    def search(self, *search_terms: SearchTermType, cache=False) -> Generator[Entry, None, None]:
         """
         Return entries that match all ``search_terms``.
         Keys are attributes on `Entry` subclasses, or special keywords.
         Values can be a single value or a tuple of values depending on operator.
         """
-        reachable = cache(self._gather_reachable)
+        if not cache:
+            self._gather_reachable.cache_clear()
         with self._load_and_store_context() as db:
             for entry in db.values():
                 conditions = []
@@ -295,7 +296,7 @@ class FilestoreBackend(_Backend):
                     if attr == "entry_type":
                         conditions.append(isinstance(entry, target))
                     elif attr == "ancestor":
-                        conditions.append(entry.uuid in reachable(target))
+                        conditions.append(entry.uuid in self._gather_reachable(target))
                     else:
                         try:
                             # check entry attribute by name
@@ -305,7 +306,10 @@ class FilestoreBackend(_Backend):
                             conditions.append(False)
                 if all(conditions):
                     yield entry
+        if not cache:
+            self._gather_reachable.cache_clear()
 
+    @cache
     def _gather_reachable(self, ancestor: UUID) -> Container[UUID]:
         """
         Finds all entries accessible from ancestor, including ancestor, and returns
