@@ -26,7 +26,7 @@ ICON_MAP = _get_icon_map()
 
 class SeverityIcons:
     cache = {}
-    scale = 1.5
+    scale = 1.3
 
     def __getitem__(self, key):
         try:
