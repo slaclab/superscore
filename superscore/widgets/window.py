@@ -56,6 +56,7 @@ class Window(QtWidgets.QMainWindow, metaclass=QtSingleton):
             "    padding: 5px;"
             "}"
         )
+        self.snapshot_table.verticalHeader().hide()
         header_view = self.snapshot_table.horizontalHeader()
         header_view.setSectionResizeMode(header_view.ResizeToContents)
         header_view.setSectionResizeMode(1, header_view.Stretch)
@@ -80,6 +81,7 @@ class Window(QtWidgets.QMainWindow, metaclass=QtSingleton):
         pv_table.setModel(PVTableModel(snapshot.uuid, self.client))
         pv_table.destroyed.connect(pv_table.model().close)
         pv_table.setShowGrid(False)
+        pv_table.verticalHeader().hide()
         header_view = pv_table.horizontalHeader()
         header_view.setSectionResizeMode(header_view.Stretch)
         header_view.setSectionResizeMode(PV_HEADER.CHECKBOX.value, header_view.ResizeToContents)
