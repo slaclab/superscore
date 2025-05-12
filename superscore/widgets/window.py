@@ -15,12 +15,8 @@ from qtpy.QtGui import QCloseEvent
 from superscore.client import Client
 from superscore.model import Entry, Snapshot
 from superscore.widgets import ICON_MAP
-<<<<<<< Updated upstream
-from superscore.widgets.admin_page import AdminPage
-=======
 from superscore.widgets.admin_page import AdminPopupWindow
 from superscore.widgets.configure_window import TagGroupsWindow
->>>>>>> Stashed changes
 from superscore.widgets.core import DataWidget, QtSingleton
 from superscore.widgets.page import PAGE_MAP
 from superscore.widgets.page.collection_builder import CollectionBuilderPage
@@ -32,6 +28,8 @@ from superscore.widgets.pv_browser_table import (PVBrowserFilterProxyModel,
 from superscore.widgets.pv_table import PV_HEADER, PVTableModel
 from superscore.widgets.snapshot_table import SnapshotTableModel
 from superscore.widgets.views import DiffDispatcher
+from superscore.widgets.configure_window import TagGroupsWindow
+
 
 logger = logging.getLogger(__name__)
 
@@ -52,18 +50,11 @@ class Window(QtWidgets.QMainWindow, metaclass=QtSingleton):
         self.setup_ui()
 
     def setup_ui(self) -> None:
-<<<<<<< Updated upstream
-        navigation_panel = NavigationPanel()
-        navigation_panel.sigViewSnapshots.connect(self.open_snapshot_table)
-        navigation_panel.sigBrowsePVs.connect(self.open_pv_browser_page)
-        navigation_panel.sigAdmin.connect(self.open_admin_page)
-=======
         self.navigation_panel = NavigationPanel()
         self.navigation_panel.sigViewSnapshots.connect(self.open_snapshot_table)
         self.navigation_panel.sigBrowsePVs.connect(self.open_pv_browser_page)
         self.navigation_panel.sigAdmin.connect(self.open_admin_page)
         self.navigation_panel.sigConfigureTags.connect(self.open_tag_groups)
->>>>>>> Stashed changes
 
         self.snapshot_table = QtWidgets.QTableView()
         self.snapshot_table.setModel(SnapshotTableModel(self.client))
@@ -80,6 +71,8 @@ class Window(QtWidgets.QMainWindow, metaclass=QtSingleton):
         header_view.setSectionResizeMode(1, header_view.Stretch)
 
         self.init_pv_browser_page()
+
+        navigation_panel.sigConfigureTags.connect(TagGroupsWindow.open_tag_groups)  
 
         splitter = QtWidgets.QSplitter(QtCore.Qt.Horizontal)
         splitter.setChildrenCollapsible(False)
@@ -166,6 +159,13 @@ class Window(QtWidgets.QMainWindow, metaclass=QtSingleton):
         header_view.setSectionResizeMode(PV_HEADER.PV.value, header_view.ResizeToContents)
 
         self.centralWidget().replaceWidget(1, pv_table)
+        self.centralWidget().setStretchFactor(1, 1)
+
+    def open_tag_groups(self) -> None:
+        """Open the tag groups configuration panel."""
+        tag_groups = TagGroupsWindow()
+        
+        self.centralWidget().replaceWidget(1, tag_groups)
         self.centralWidget().setStretchFactor(1, 1)
 
     def remove_tab(self, tab_index: int) -> None:
