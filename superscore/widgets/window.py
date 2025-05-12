@@ -22,8 +22,6 @@ from superscore.widgets.pv_browser_table import (PVBrowserFilterProxyModel,
                                                  PVBrowserTableModel)
 from superscore.widgets.snapshot_table import SnapshotTableModel
 from superscore.widgets.views import DiffDispatcher
-from superscore.widgets.configure_window import TagGroupsWindow
-
 
 logger = logging.getLogger(__name__)
 
