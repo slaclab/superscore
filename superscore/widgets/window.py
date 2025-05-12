@@ -28,8 +28,6 @@ from superscore.widgets.pv_browser_table import (PVBrowserFilterProxyModel,
 from superscore.widgets.pv_table import PV_HEADER, PVTableModel
 from superscore.widgets.snapshot_table import SnapshotTableModel
 from superscore.widgets.views import DiffDispatcher
-from superscore.widgets.configure_window import TagGroupsWindow
-
 
 logger = logging.getLogger(__name__)
 
@@ -71,8 +69,6 @@ class Window(QtWidgets.QMainWindow, metaclass=QtSingleton):
         header_view.setSectionResizeMode(1, header_view.Stretch)
 
         self.init_pv_browser_page()
-
-        navigation_panel.sigConfigureTags.connect(TagGroupsWindow.open_tag_groups)  
 
         splitter = QtWidgets.QSplitter(QtCore.Qt.Horizontal)
         splitter.setChildrenCollapsible(False)
@@ -164,7 +160,7 @@ class Window(QtWidgets.QMainWindow, metaclass=QtSingleton):
     def open_tag_groups(self) -> None:
         """Open the tag groups configuration panel."""
         tag_groups = TagGroupsWindow()
-        
+
         self.centralWidget().replaceWidget(1, tag_groups)
         self.centralWidget().setStretchFactor(1, 1)
 
