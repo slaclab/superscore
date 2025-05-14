@@ -16,6 +16,7 @@ from qtpy.QtGui import QCloseEvent
 from superscore.client import Client
 from superscore.model import Entry, Snapshot
 from superscore.widgets import ICON_MAP
+from superscore.widgets.admin_page import AdminPage
 from superscore.widgets.core import DataWidget, QtSingleton
 from superscore.widgets.page import PAGE_MAP
 from superscore.widgets.page.collection_builder import CollectionBuilderPage
@@ -27,7 +28,6 @@ from superscore.widgets.pv_browser_table import (PVBrowserFilterProxyModel,
 from superscore.widgets.pv_table import PV_HEADER, PVTableModel
 from superscore.widgets.snapshot_table import SnapshotTableModel
 from superscore.widgets.views import DiffDispatcher
-from superscore.widgets.admin_page import AdminPage
 
 logger = logging.getLogger(__name__)
 
@@ -80,6 +80,7 @@ class Window(QtWidgets.QMainWindow, metaclass=QtSingleton):
         navigation_panel.sigViewSnapshots.connect(self.open_snapshot_table)
         navigation_panel.sigBrowsePVs.connect(self.open_pv_browser_page)
         navigation_panel.sigAdmin.connect(self.open_admin_page)
+<<<<<<< HEAD
         navigation_panel.set_nav_button_selected(navigation_panel.view_snapshots_button)
         navigation_panel.setSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Preferred)
         return navigation_panel
@@ -90,6 +91,13 @@ class Window(QtWidgets.QMainWindow, metaclass=QtSingleton):
         snapshot_table.setModel(SnapshotTableModel(self.client))
         snapshot_table.doubleClicked.connect(self.open_snapshot)
         snapshot_table.setStyleSheet(
+=======
+
+        self.snapshot_table = QtWidgets.QTableView()
+        self.snapshot_table.setModel(SnapshotTableModel(self.client))
+        self.snapshot_table.doubleClicked.connect(self.open_snapshot)
+        self.snapshot_table.setStyleSheet(
+>>>>>>> 9000228 (formatting fixes)
             "QTableView::item {"
             "    border: 0px;"  # required to enforce padding on left side of cell
             "    padding: 5px;"
@@ -146,6 +154,13 @@ class Window(QtWidgets.QMainWindow, metaclass=QtSingleton):
             self.main_content_stack.setCurrentWidget(self.snapshot_table)
             self.navigation_panel.set_nav_button_selected(self.navigation_panel.view_snapshots_button)
 
+<<<<<<< HEAD
+=======
+    def open_snapshot_table(self):
+        if self.centralWidget().widget(1) != self.snapshot_table:
+            self.centralWidget().replaceWidget(1, self.snapshot_table)
+
+>>>>>>> 9000228 (formatting fixes)
     def open_admin_page(self):
         """open admin page"""
         admin_page = AdminPage()
