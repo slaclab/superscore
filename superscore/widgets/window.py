@@ -15,6 +15,7 @@ from qtpy.QtGui import QCloseEvent
 from superscore.client import Client
 from superscore.model import Entry, Snapshot
 from superscore.widgets import ICON_MAP
+from superscore.widgets.admin_page import AdminPage
 from superscore.widgets.core import DataWidget, QtSingleton
 from superscore.widgets.page import PAGE_MAP
 from superscore.widgets.page.collection_builder import CollectionBuilderPage
@@ -26,7 +27,6 @@ from superscore.widgets.pv_browser_table import (PVBrowserFilterProxyModel,
 from superscore.widgets.pv_table import PV_HEADER, PVTableModel
 from superscore.widgets.snapshot_table import SnapshotTableModel
 from superscore.widgets.views import DiffDispatcher
-from superscore.widgets.admin_page import AdminPage
 
 logger = logging.getLogger(__name__)
 
@@ -51,7 +51,7 @@ class Window(QtWidgets.QMainWindow, metaclass=QtSingleton):
         navigation_panel.sigViewSnapshots.connect(self.open_snapshot_table)
         navigation_panel.sigBrowsePVs.connect(self.open_pv_browser_page)
         navigation_panel.sigAdmin.connect(self.open_admin_page)
-        
+
         self.snapshot_table = QtWidgets.QTableView()
         self.snapshot_table.setModel(SnapshotTableModel(self.client))
         self.snapshot_table.doubleClicked.connect(self.open_snapshot)
@@ -122,7 +122,7 @@ class Window(QtWidgets.QMainWindow, metaclass=QtSingleton):
     def open_snapshot_table(self):
         if self.centralWidget().widget(1) != self.snapshot_table:
             self.centralWidget().replaceWidget(1, self.snapshot_table)
-    
+
     def open_admin_page(self):
         """open admin page"""
         admin_page = AdminPage()
@@ -295,7 +295,6 @@ class NavigationPanel(QtWidgets.QWidget):
         admin_button.setIcon(qta.icon("ri.admin-line"))
         admin_button.setFlat(True)
         admin_button.clicked.connect(self.sigAdmin.emit)
-        #self.layout().addWidget(admin_button)
 
         h_layout = QtWidgets.QHBoxLayout()
         h_layout.addStretch(1)
@@ -307,4 +306,3 @@ class NavigationPanel(QtWidgets.QWidget):
         save_button.setText("Save Snapshot")
         save_button.clicked.connect(self.sigSave.emit)
         self.layout().addWidget(save_button)
-
