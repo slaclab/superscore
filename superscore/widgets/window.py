@@ -17,11 +17,11 @@ from superscore.model import Snapshot
 from superscore.widgets.core import NameDescTagsWidget, QtSingleton
 from superscore.widgets.page.page import Page
 from superscore.widgets.page.snapshot_details import SnapshotDetailsPage
+
 from superscore.widgets.pv_browser_table import (PVBrowserFilterProxyModel,
                                                  PVBrowserTableModel)
 from superscore.widgets.snapshot_table import SnapshotTableModel
 from superscore.widgets.views import DiffDispatcher
-from superscore.widgets.admin_page import AdminPage
 
 logger = logging.getLogger(__name__)
 
@@ -83,6 +83,7 @@ class Window(QtWidgets.QMainWindow, metaclass=QtSingleton):
         view_snapshot_layout = QtWidgets.QVBoxLayout()
         view_snapshot_layout.setContentsMargins(0, 11, 0, 0)
         view_snapshot_page.setLayout(view_snapshot_layout)
+
 
         self.snapshot_table = QtWidgets.QTableView()
         self.snapshot_table.setModel(SnapshotTableModel(self.client))
