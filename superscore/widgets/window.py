@@ -27,6 +27,7 @@ from superscore.widgets.pv_browser_table import (PVBrowserFilterProxyModel,
 from superscore.widgets.pv_table import PV_HEADER, PVTableModel
 from superscore.widgets.snapshot_table import SnapshotTableModel
 from superscore.widgets.views import DiffDispatcher
+from superscore.widgets.admin_page import AdminPage
 
 logger = logging.getLogger(__name__)
 
@@ -78,6 +79,7 @@ class Window(QtWidgets.QMainWindow, metaclass=QtSingleton):
         navigation_panel = NavigationPanel()
         navigation_panel.sigViewSnapshots.connect(self.open_snapshot_table)
         navigation_panel.sigBrowsePVs.connect(self.open_pv_browser_page)
+        navigation_panel.sigAdmin.connect(self.open_admin_page)
         navigation_panel.set_nav_button_selected(navigation_panel.view_snapshots_button)
         navigation_panel.setSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Preferred)
         return navigation_panel
@@ -143,6 +145,13 @@ class Window(QtWidgets.QMainWindow, metaclass=QtSingleton):
         if self.main_content_stack.currentWidget() != self.snapshot_table:
             self.main_content_stack.setCurrentWidget(self.snapshot_table)
             self.navigation_panel.set_nav_button_selected(self.navigation_panel.view_snapshots_button)
+
+    def open_admin_page(self):
+        """open admin page"""
+        admin_page = AdminPage()
+
+        self.centralWidget().replaceWidget(1, admin_page)
+        self.centralWidget().setStretchFactor(1, 1)
 
     def open_snapshot(self, index: QtCore.Qt.QModelIndex) -> None:
         """Opens the snapshot stored at the selected index. A widget representing the
@@ -287,6 +296,7 @@ class NavigationPanel(QtWidgets.QWidget):
     sigConfigureTags = QtCore.Signal()
     sigSave = QtCore.Signal()
     sigExpandedChanged = QtCore.Signal(bool)
+    sigAdmin = QtCore.Signal()
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -370,6 +380,16 @@ class NavigationPanel(QtWidgets.QWidget):
         toggle_expand_layout.addStretch()
         self.layout().addLayout(toggle_expand_layout)
 
+        admin_button: QPushButton = QtWidgets.QPushButton()
+        admin_button.setIcon(qta.icon("ri.admin-line"))
+        admin_button.setFlat(True)
+        admin_button.clicked.connect(self.sigAdmin.emit)
+
+        h_layout: QHBoxLayout = QtWidgets.QHBoxLayout()
+        h_layout.addStretch(1)
+        h_layout.addWidget(admin_button, 0, QtCore.Qt.AlignRight)
+        self.layout().addLayout(h_layout)
+
         self.save_button = QtWidgets.QPushButton()
         self.save_button.setIcon(qta.icon("ph.instagram-logo"))
         self.save_button.setIconSize(QtCore.QSize(24, 24))
@@ -423,3 +443,4 @@ class NavigationPanel(QtWidgets.QWidget):
         stylesheet = self.styleSheet()
         self.setStyleSheet("")
         self.setStyleSheet(stylesheet)
+
