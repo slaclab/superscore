@@ -21,6 +21,7 @@ from superscore.widgets.pv_browser_table import (PVBrowserFilterProxyModel,
                                                  PVBrowserTableModel)
 from superscore.widgets.snapshot_table import SnapshotTableModel
 from superscore.widgets.views import DiffDispatcher
+from superscore.widgets.admin_page import AdminPage
 
 logger = logging.getLogger(__name__)
 
