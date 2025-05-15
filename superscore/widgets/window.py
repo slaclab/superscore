@@ -16,7 +16,12 @@ from qtpy.QtGui import QCloseEvent
 from superscore.client import Client
 from superscore.model import Entry, Snapshot
 from superscore.widgets import ICON_MAP
+<<<<<<< Updated upstream
 from superscore.widgets.admin_page import AdminPage
+=======
+from superscore.widgets.admin_page import AdminPopupWindow
+from superscore.widgets.configure_window import TagGroupsWindow
+>>>>>>> Stashed changes
 from superscore.widgets.core import DataWidget, QtSingleton
 from superscore.widgets.page import PAGE_MAP
 from superscore.widgets.page.collection_builder import CollectionBuilderPage
@@ -49,6 +54,7 @@ class Window(QtWidgets.QMainWindow, metaclass=QtSingleton):
         self.setup_ui()
 
     def setup_ui(self) -> None:
+<<<<<<< HEAD
         self.navigation_panel = self.init_nav_panel()
 
         # Initialize content pages and add to stack
@@ -76,10 +82,14 @@ class Window(QtWidgets.QMainWindow, metaclass=QtSingleton):
         self.diff_dispatcher.comparison_ready.connect(self.open_diff_page)
 
     def init_nav_panel(self) -> NavigationPanel:
+=======
+<<<<<<< Updated upstream
+>>>>>>> 9bbb003 (updates to design of the admin page)
         navigation_panel = NavigationPanel()
         navigation_panel.sigViewSnapshots.connect(self.open_snapshot_table)
         navigation_panel.sigBrowsePVs.connect(self.open_pv_browser_page)
         navigation_panel.sigAdmin.connect(self.open_admin_page)
+<<<<<<< HEAD
 <<<<<<< HEAD
         navigation_panel.set_nav_button_selected(navigation_panel.view_snapshots_button)
         navigation_panel.setSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Preferred)
@@ -92,6 +102,15 @@ class Window(QtWidgets.QMainWindow, metaclass=QtSingleton):
         snapshot_table.doubleClicked.connect(self.open_snapshot)
         snapshot_table.setStyleSheet(
 =======
+=======
+=======
+        self.navigation_panel = NavigationPanel()
+        self.navigation_panel.sigViewSnapshots.connect(self.open_snapshot_table)
+        self.navigation_panel.sigBrowsePVs.connect(self.open_pv_browser_page)
+        self.navigation_panel.sigAdmin.connect(self.open_admin_page)
+        self.navigation_panel.sigConfigureTags.connect(self.open_tag_groups)
+>>>>>>> Stashed changes
+>>>>>>> 9bbb003 (updates to design of the admin page)
 
         self.snapshot_table = QtWidgets.QTableView()
         self.snapshot_table.setModel(SnapshotTableModel(self.client))
@@ -107,7 +126,23 @@ class Window(QtWidgets.QMainWindow, metaclass=QtSingleton):
         header_view = snapshot_table.horizontalHeader()
         header_view.setSectionResizeMode(header_view.ResizeToContents)
         header_view.setSectionResizeMode(1, header_view.Stretch)
+<<<<<<< HEAD
         return snapshot_table
+=======
+
+        self.init_pv_browser_page()
+
+        splitter = QtWidgets.QSplitter(QtCore.Qt.Horizontal)
+        splitter.setChildrenCollapsible(False)
+        splitter.addWidget(self.navigation_panel)
+        splitter.addWidget(self.snapshot_table)
+        splitter.setStretchFactor(0, 0)
+        splitter.setStretchFactor(1, 1)
+        self.setCentralWidget(splitter)
+
+        # open diff page
+        self.diff_dispatcher.comparison_ready.connect(self.open_diff_page)
+>>>>>>> 9bbb003 (updates to design of the admin page)
 
     def init_pv_browser_page(self) -> QtWidgets.QWidget:
         """Initialize the PV browser page with the PV browser table."""
@@ -163,10 +198,18 @@ class Window(QtWidgets.QMainWindow, metaclass=QtSingleton):
 >>>>>>> 9000228 (formatting fixes)
     def open_admin_page(self):
         """open admin page"""
-        admin_page = AdminPage()
+        dialog = AdminPopupWindow.show_admin_popup(self, backend_api=None)
+        dialog.user_logged_in.connect(self.on_user_logged_in)
+        dialog.user_logged_out.connect(self.on_user_logged_out)
+        dialog.exec_()
 
-        self.centralWidget().replaceWidget(1, admin_page)
-        self.centralWidget().setStretchFactor(1, 1)
+    def on_user_logged_in(self, username):
+        print(f"User logged in: {username}")
+        self.navigation_panel.status_label.setText(f"{username}")
+    
+    def on_user_logged_out(self):
+        print("User logged out")
+        self.navigation_panel.status_label.setText("")
 
     def open_snapshot(self, index: QtCore.Qt.QModelIndex) -> None:
         """Opens the snapshot stored at the selected index. A widget representing the
@@ -399,10 +442,15 @@ class NavigationPanel(QtWidgets.QWidget):
         admin_button.setIcon(qta.icon("ri.admin-line"))
         admin_button.setFlat(True)
         admin_button.clicked.connect(self.sigAdmin.emit)
+        self.status_label = QtWidgets.QLabel("")
 
         h_layout: QHBoxLayout = QtWidgets.QHBoxLayout()
+        h_layout = QtWidgets.QHBoxLayout()
+        h_layout.setSpacing(0)
         h_layout.addStretch(1)
         h_layout.addWidget(admin_button, 0, QtCore.Qt.AlignRight)
+        h_layout.addWidget(self.status_label, 0, QtCore.Qt.AlignRight)
+
         self.layout().addLayout(h_layout)
 
         self.save_button = QtWidgets.QPushButton()
