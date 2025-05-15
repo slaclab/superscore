@@ -15,7 +15,12 @@ from qtpy.QtGui import QCloseEvent
 from superscore.client import Client
 from superscore.model import Entry, Snapshot
 from superscore.widgets import ICON_MAP
+<<<<<<< Updated upstream
 from superscore.widgets.admin_page import AdminPage
+=======
+from superscore.widgets.admin_page import AdminPopupWindow
+from superscore.widgets.configure_window import TagGroupsWindow
+>>>>>>> Stashed changes
 from superscore.widgets.core import DataWidget, QtSingleton
 from superscore.widgets.page import PAGE_MAP
 from superscore.widgets.page.collection_builder import CollectionBuilderPage
@@ -47,10 +52,18 @@ class Window(QtWidgets.QMainWindow, metaclass=QtSingleton):
         self.setup_ui()
 
     def setup_ui(self) -> None:
+<<<<<<< Updated upstream
         navigation_panel = NavigationPanel()
         navigation_panel.sigViewSnapshots.connect(self.open_snapshot_table)
         navigation_panel.sigBrowsePVs.connect(self.open_pv_browser_page)
         navigation_panel.sigAdmin.connect(self.open_admin_page)
+=======
+        self.navigation_panel = NavigationPanel()
+        self.navigation_panel.sigViewSnapshots.connect(self.open_snapshot_table)
+        self.navigation_panel.sigBrowsePVs.connect(self.open_pv_browser_page)
+        self.navigation_panel.sigAdmin.connect(self.open_admin_page)
+        self.navigation_panel.sigConfigureTags.connect(self.open_tag_groups)
+>>>>>>> Stashed changes
 
         self.snapshot_table = QtWidgets.QTableView()
         self.snapshot_table.setModel(SnapshotTableModel(self.client))
@@ -70,7 +83,7 @@ class Window(QtWidgets.QMainWindow, metaclass=QtSingleton):
 
         splitter = QtWidgets.QSplitter(QtCore.Qt.Horizontal)
         splitter.setChildrenCollapsible(False)
-        splitter.addWidget(navigation_panel)
+        splitter.addWidget(self.navigation_panel)
         splitter.addWidget(self.snapshot_table)
         splitter.setStretchFactor(0, 0)
         splitter.setStretchFactor(1, 1)
@@ -125,10 +138,18 @@ class Window(QtWidgets.QMainWindow, metaclass=QtSingleton):
 
     def open_admin_page(self):
         """open admin page"""
-        admin_page = AdminPage()
+        dialog = AdminPopupWindow.show_admin_popup(self, backend_api=None)
+        dialog.user_logged_in.connect(self.on_user_logged_in)
+        dialog.user_logged_out.connect(self.on_user_logged_out)
+        dialog.exec_()
 
-        self.centralWidget().replaceWidget(1, admin_page)
-        self.centralWidget().setStretchFactor(1, 1)
+    def on_user_logged_in(self, username):
+        print(f"User logged in: {username}")
+        self.navigation_panel.status_label.setText(f"{username}")
+    
+    def on_user_logged_out(self):
+        print("User logged out")
+        self.navigation_panel.status_label.setText("")
 
     def open_snapshot(self, index: QtCore.Qt.QModelIndex) -> None:
         snapshot = self.snapshot_table.model()._data[index.row()]
@@ -295,10 +316,14 @@ class NavigationPanel(QtWidgets.QWidget):
         admin_button.setIcon(qta.icon("ri.admin-line"))
         admin_button.setFlat(True)
         admin_button.clicked.connect(self.sigAdmin.emit)
+        self.status_label = QtWidgets.QLabel("")
 
         h_layout = QtWidgets.QHBoxLayout()
+        h_layout.setSpacing(0)
         h_layout.addStretch(1)
         h_layout.addWidget(admin_button, 0, QtCore.Qt.AlignRight)
+        h_layout.addWidget(self.status_label, 0, QtCore.Qt.AlignRight)
+
         self.layout().addLayout(h_layout)
 
         save_button = QtWidgets.QPushButton()
