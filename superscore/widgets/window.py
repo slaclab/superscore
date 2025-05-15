@@ -95,7 +95,7 @@ class Window(QtWidgets.QMainWindow, metaclass=QtSingleton):
         search_bar = QtWidgets.QLineEdit(self.pv_browser_page)
         search_bar.setClearButtonEnabled(True)
         search_bar.addAction(
-            qta.icon("fa5s.search"),
+            qta.icon("fa5s.search", color='#555555'),
             QtWidgets.QLineEdit.LeadingPosition,
         )
         search_bar.textChanged.connect(pv_browser_filter.setFilterFixedString)
@@ -286,21 +286,21 @@ class NavigationPanel(QtWidgets.QWidget):
         self.setLayout(QtWidgets.QVBoxLayout())
 
         view_snapshots_button = QtWidgets.QPushButton()
-        view_snapshots_button.setIcon(qta.icon("ph.stack"))
+        view_snapshots_button.setIcon(qta.icon("ph.stack", color='#555555'))
         view_snapshots_button.setText("View Snapshots")
         view_snapshots_button.setFlat(True)
         view_snapshots_button.clicked.connect(self.sigViewSnapshots.emit)
         self.layout().addWidget(view_snapshots_button)
 
         browse_pvs_button = QtWidgets.QPushButton()
-        browse_pvs_button.setIcon(qta.icon("ph.database"))
+        browse_pvs_button.setIcon(qta.icon("ph.database", color='#555555'))
         browse_pvs_button.setText("Browse PVs")
         browse_pvs_button.setFlat(True)
         browse_pvs_button.clicked.connect(self.sigBrowsePVs.emit)
         self.layout().addWidget(browse_pvs_button)
 
         configure_tags_button = QtWidgets.QPushButton()
-        configure_tags_button.setIcon(qta.icon("ph.tag"))
+        configure_tags_button.setIcon(qta.icon("ph.tag", color='#555555'))
         configure_tags_button.setText("Configure Tags")
         configure_tags_button.setFlat(True)
         configure_tags_button.clicked.connect(self.sigConfigureTags.emit)
@@ -309,7 +309,7 @@ class NavigationPanel(QtWidgets.QWidget):
         self.layout().addStretch()
 
         admin_button = QtWidgets.QPushButton()
-        admin_button.setIcon(qta.icon("ri.admin-line"))
+        admin_button.setIcon(qta.icon("fa5.user-circle", color='#555555'))
         admin_button.setFlat(True)
         admin_button.clicked.connect(self.sigAdmin.emit)
         self.status_label = QtWidgets.QLabel("")
@@ -323,7 +323,7 @@ class NavigationPanel(QtWidgets.QWidget):
         self.layout().addLayout(h_layout)
 
         save_button = QtWidgets.QPushButton()
-        save_button.setIcon(qta.icon("ph.instagram-logo"))
+        save_button.setIcon(qta.icon("ph.instagram-logo", color='#555555'))
         save_button.setText("Save Snapshot")
         save_button.clicked.connect(self.sigSave.emit)
         self.layout().addWidget(save_button)

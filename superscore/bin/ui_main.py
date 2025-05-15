@@ -9,6 +9,7 @@ from typing import Optional
 
 from qtpy.QtGui import QColor, QPalette
 from qtpy.QtWidgets import QApplication
+from qtpy.QtCore import Qt
 
 from superscore.client import Client
 from superscore.widgets.window import Window
@@ -18,6 +19,9 @@ DEFAULT_HEIGHT = 800
 
 
 def main(cfg_path: Optional[str] = None):
+    QApplication.setAttribute(Qt.AA_EnableHighDpiScaling, True)
+    QApplication.setAttribute(Qt.AA_UseHighDpiPixmaps, True)
+
     app = QApplication(sys.argv)
     if cfg_path:
         client = Client.from_config(cfg_path)
