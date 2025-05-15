@@ -1,5 +1,4 @@
-from qtpy.QtCore import QObject, Signal
-
+from qtpy.QtCore import Signal, QObject
 
 class PermissionManager(QObject):
     admin_status_changed = Signal(bool)
