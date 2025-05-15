@@ -17,7 +17,7 @@ from superscore.model import Snapshot
 from superscore.widgets.core import NameDescTagsWidget, QtSingleton
 from superscore.widgets.page.page import Page
 from superscore.widgets.page.snapshot_details import SnapshotDetailsPage
-
+from superscore.widgets.configure_window import TagGroupsWindow
 from superscore.widgets.pv_browser_table import (PVBrowserFilterProxyModel,
                                                  PVBrowserTableModel)
 from superscore.widgets.snapshot_table import SnapshotTableModel
@@ -84,6 +84,11 @@ class Window(QtWidgets.QMainWindow, metaclass=QtSingleton):
         view_snapshot_layout.setContentsMargins(0, 11, 0, 0)
         view_snapshot_page.setLayout(view_snapshot_layout)
 
+        self.navigation_panel = NavigationPanel()
+        self.navigation_panel.sigViewSnapshots.connect(self.open_snapshot_table)
+        self.navigation_panel.sigBrowsePVs.connect(self.open_pv_browser_page)
+        self.navigation_panel.sigAdmin.connect(self.open_admin_page)
+        self.navigation_panel.sigConfigureTags.connect(self.open_tag_groups)
 
         self.snapshot_table = QtWidgets.QTableView()
         self.snapshot_table.setModel(SnapshotTableModel(self.client))
