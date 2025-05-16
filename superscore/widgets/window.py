@@ -1,6 +1,7 @@
 """
 Top-level window widget that contains other widgets
 """
+
 from __future__ import annotations
 
 import logging
@@ -43,39 +44,60 @@ class Window(QtWidgets.QMainWindow, metaclass=QtSingleton):
         else:
             self.client = Client.from_config()
         self._partial_slots = []
+        self.pv_tables_in_stack = {}
         self.setup_ui()
 
     def setup_ui(self) -> None:
+        self.navigation_panel = self.init_nav_panel()
+
+        # Initialize content pages and add to stack
+        self.snapshot_table = self.init_snapshot_table()
+        self.pv_browser_page = self.init_pv_browser_page()
+
+        self.main_content_stack = QtWidgets.QStackedLayout()
+        self.main_content_stack.addWidget(self.snapshot_table)
+        self.main_content_stack.addWidget(self.pv_browser_page)
+        self.main_content_stack.setCurrentWidget(self.snapshot_table)
+        self.main_content_container = QtWidgets.QWidget()
+        self.main_content_container.setContentsMargins(0, 0, 0, 0)
+        self.main_content_container.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Preferred)
+        self.main_content_container.setLayout(self.main_content_stack)
+
+        central_widget = QtWidgets.QWidget()
+        central_widget.setLayout(QtWidgets.QHBoxLayout())
+        central_widget.layout().addWidget(self.navigation_panel)
+        central_widget.layout().addWidget(self.main_content_container)
+        central_widget.layout().setSpacing(0)
+        central_widget.layout().setContentsMargins(0, 0, 0, 0)
+        self.setCentralWidget(central_widget)
+
+        # open diff page
+        self.diff_dispatcher.comparison_ready.connect(self.open_diff_page)
+
+    def init_nav_panel(self) -> NavigationPanel:
         navigation_panel = NavigationPanel()
         navigation_panel.sigViewSnapshots.connect(self.open_snapshot_table)
         navigation_panel.sigBrowsePVs.connect(self.open_pv_browser_page)
+        navigation_panel.set_nav_button_selected(navigation_panel.view_snapshots_button)
+        navigation_panel.setSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Preferred)
+        return navigation_panel
 
-        self.snapshot_table = QtWidgets.QTableView()
-        self.snapshot_table.setModel(SnapshotTableModel(self.client))
-        self.snapshot_table.doubleClicked.connect(self.open_snapshot)
-        self.snapshot_table.setStyleSheet(
+    def init_snapshot_table(self) -> QtWidgets.QTableView:
+        """Initialize the snapshot page"""
+        snapshot_table = QtWidgets.QTableView()
+        snapshot_table.setModel(SnapshotTableModel(self.client))
+        snapshot_table.doubleClicked.connect(self.open_snapshot)
+        snapshot_table.setStyleSheet(
             "QTableView::item {"
             "    border: 0px;"  # required to enforce padding on left side of cell
             "    padding: 5px;"
             "}"
         )
-        self.snapshot_table.verticalHeader().hide()
-        header_view = self.snapshot_table.horizontalHeader()
+        snapshot_table.verticalHeader().hide()
+        header_view = snapshot_table.horizontalHeader()
         header_view.setSectionResizeMode(header_view.ResizeToContents)
         header_view.setSectionResizeMode(1, header_view.Stretch)
-
-        self.init_pv_browser_page()
-
-        splitter = QtWidgets.QSplitter(QtCore.Qt.Horizontal)
-        splitter.setChildrenCollapsible(False)
-        splitter.addWidget(navigation_panel)
-        splitter.addWidget(self.snapshot_table)
-        splitter.setStretchFactor(0, 0)
-        splitter.setStretchFactor(1, 1)
-        self.setCentralWidget(splitter)
-
-        # open diff page
-        self.diff_dispatcher.comparison_ready.connect(self.open_diff_page)
+        return snapshot_table
 
     def init_pv_browser_page(self) -> QtWidgets.QWidget:
         """Initialize the PV browser page with the PV browser table."""
@@ -83,12 +105,12 @@ class Window(QtWidgets.QMainWindow, metaclass=QtSingleton):
         pv_browser_filter = PVBrowserFilterProxyModel()
         pv_browser_filter.setSourceModel(pv_browser_model)
 
-        self.pv_browser_page = QtWidgets.QWidget()
+        pv_browser_page = QtWidgets.QWidget()
         pv_browser_layout = QtWidgets.QVBoxLayout()
         pv_browser_layout.setContentsMargins(0, 11, 0, 0)
-        self.pv_browser_page.setLayout(pv_browser_layout)
+        pv_browser_page.setLayout(pv_browser_layout)
 
-        search_bar = QtWidgets.QLineEdit(self.pv_browser_page)
+        search_bar = QtWidgets.QLineEdit(pv_browser_page)
         search_bar.setClearButtonEnabled(True)
         search_bar.addAction(
             qta.icon("fa5s.search"),
@@ -101,42 +123,56 @@ class Window(QtWidgets.QMainWindow, metaclass=QtSingleton):
         search_bar_lyt.addSpacerItem(spacer)
         pv_browser_layout.addLayout(search_bar_lyt)
 
-        self.pv_browser_table = QtWidgets.QTableView(self.pv_browser_page)
+        self.pv_browser_table = QtWidgets.QTableView(pv_browser_page)
         self.pv_browser_table.setModel(pv_browser_filter)
         self.pv_browser_table.verticalHeader().hide()
         header_view = self.pv_browser_table.horizontalHeader()
         header_view.setSectionResizeMode(header_view.ResizeToContents)
         header_view.setStretchLastSection(True)
         pv_browser_layout.addWidget(self.pv_browser_table)
+        return pv_browser_page
 
     def open_pv_browser_page(self) -> None:
         """Open the PV Browser Page if it is not already open."""
-        curr_widget = self.centralWidget().widget(1)
-        if curr_widget is self.pv_browser_page:
-            return
-        self.centralWidget().replaceWidget(1, self.pv_browser_page)
-        self.centralWidget().setStretchFactor(1, 1)
+        if self.main_content_stack.currentWidget() != self.pv_browser_page:
+            self.main_content_stack.setCurrentWidget(self.pv_browser_page)
+            self.navigation_panel.set_nav_button_selected(self.navigation_panel.browse_pvs_button)
 
-    def open_snapshot_table(self):
-        if self.centralWidget().widget(1) != self.snapshot_table:
-            self.centralWidget().replaceWidget(1, self.snapshot_table)
+    def open_snapshot_table(self) -> None:
+        """Open the snapshot page if it is not already open."""
+        if self.main_content_stack.currentWidget() != self.snapshot_table:
+            self.main_content_stack.setCurrentWidget(self.snapshot_table)
+            self.navigation_panel.set_nav_button_selected(self.navigation_panel.view_snapshots_button)
 
     def open_snapshot(self, index: QtCore.Qt.QModelIndex) -> None:
-        snapshot = self.snapshot_table.model()._data[index.row()]
-        pv_table = QtWidgets.QTableView()
-        pv_table.setModel(PVTableModel(snapshot.uuid, self.client))
-        pv_table.destroyed.connect(pv_table.model().close)
-        pv_table.setShowGrid(False)
-        pv_table.verticalHeader().hide()
-        header_view = pv_table.horizontalHeader()
-        header_view.setSectionResizeMode(header_view.Stretch)
-        header_view.setSectionResizeMode(PV_HEADER.CHECKBOX.value, header_view.ResizeToContents)
-        header_view.setSectionResizeMode(PV_HEADER.SEVERITY.value, header_view.ResizeToContents)
-        header_view.setSectionResizeMode(PV_HEADER.DEVICE.value, header_view.ResizeToContents)
-        header_view.setSectionResizeMode(PV_HEADER.PV.value, header_view.ResizeToContents)
+        """Opens the snapshot stored at the selected index. A widget representing the
+        snapshot is created if necessary and set as the current view in the stack.
 
-        self.centralWidget().replaceWidget(1, pv_table)
-        self.centralWidget().setStretchFactor(1, 1)
+        Args:
+            index (QtCore.Qt.QModelIndex): table index of the snapshot to open
+        """
+        snapshot = self.snapshot_table.model()._data[index.row()]
+        if snapshot.uuid not in self.pv_tables_in_stack.keys():
+            # table doesn't exist in stack, make it
+            pv_table = QtWidgets.QTableView()
+            pv_table.setModel(PVTableModel(snapshot.uuid, self.client))
+            pv_table.destroyed.connect(pv_table.model().close)
+            pv_table.setShowGrid(False)
+            pv_table.verticalHeader().hide()
+            header_view = pv_table.horizontalHeader()
+            header_view.setSectionResizeMode(header_view.Stretch)
+            header_view.setSectionResizeMode(PV_HEADER.CHECKBOX.value, header_view.ResizeToContents)
+            header_view.setSectionResizeMode(PV_HEADER.SEVERITY.value, header_view.ResizeToContents)
+            header_view.setSectionResizeMode(PV_HEADER.DEVICE.value, header_view.ResizeToContents)
+            header_view.setSectionResizeMode(PV_HEADER.PV.value, header_view.ResizeToContents)
+
+            self.main_content_stack.addWidget(pv_table)
+            self.pv_tables_in_stack[snapshot.uuid] = pv_table
+        else:
+            # table already exists in stack, retrieve it
+            pv_table = self.pv_tables_in_stack[snapshot.uuid]
+
+        self.main_content_stack.setCurrentWidget(pv_table)
 
     def remove_tab(self, tab_index: int) -> None:
         """Remove the requested tab and delete the widget"""
@@ -153,10 +189,11 @@ class Window(QtWidgets.QMainWindow, metaclass=QtSingleton):
     def open_collection_builder(self):
         """open collection builder page"""
         page = CollectionBuilderPage(client=self.client)
-        self.tab_widget.addTab(page, 'new collection')
+        self.tab_widget.addTab(page, "new collection")
         self.tab_widget.setCurrentWidget(page)
         update_slot = WeakPartialMethodSlot(
-            page.bridge.title, page.bridge.title.updated,
+            page.bridge.title,
+            page.bridge.title.updated,
             self._update_tab_title,
             tab_index=self.tab_widget.indexOf(page),
         )
@@ -176,25 +213,23 @@ class Window(QtWidgets.QMainWindow, metaclass=QtSingleton):
         DataWidget
             Created widget, for cross references
         """
-        logger.debug(f'attempting to open {entry}')
+        logger.debug(f"attempting to open {entry}")
         if not isinstance(entry, Entry):
-            logger.debug('Could not open page for non-Entry dataclass')
+            logger.debug("Could not open page for non-Entry dataclass")
             return
 
         if type(entry) not in PAGE_MAP:
-            logger.debug(f'No page corresponding to {type(entry).__name__}')
+            logger.debug(f"No page corresponding to {type(entry).__name__}")
 
         try:
             page = PAGE_MAP[type(entry)]
         except KeyError:
-            logger.debug(f'No page widget for {type(entry)}, cannot open in tab')
+            logger.debug(f"No page widget for {type(entry)}, cannot open in tab")
             return
 
         page_widget = page(data=entry, client=self.client)
         icon = qta.icon(ICON_MAP[type(entry)])
-        tab_name = getattr(
-            entry, 'title', getattr(entry, 'pv_name', f'<{type(entry).__name__}>')
-        )
+        tab_name = getattr(entry, "title", getattr(entry, "pv_name", f"<{type(entry).__name__}>"))
         idx = self.tab_widget.addTab(page_widget, icon, tab_name)
         self.tab_widget.setCurrentIndex(idx)
 
@@ -206,7 +241,7 @@ class Window(QtWidgets.QMainWindow, metaclass=QtSingleton):
 
     def open_search_page(self) -> None:
         page = SearchPage(client=self.client)
-        index = self.tab_widget.addTab(page, 'search')
+        index = self.tab_widget.addTab(page, "search")
         self.tab_widget.setCurrentIndex(index)
 
     def open_restore_page(self, snapshot: Snapshot) -> None:
@@ -220,27 +255,26 @@ class Window(QtWidgets.QMainWindow, metaclass=QtSingleton):
             l_entry=self.diff_dispatcher.l_entry,
             r_entry=self.diff_dispatcher.r_entry,
         )
-        index = self.tab_widget.addTab(page, 'Comparison View')
+        index = self.tab_widget.addTab(page, "Comparison View")
         self.tab_widget.setCurrentIndex(index)
 
     def _window_context_menu(self, entry: Entry) -> QtWidgets.QMenu:
         """override for RootTreeView context menu"""
         menu = QtWidgets.QMenu(self)
-        open_action = menu.addAction(
-            f'&Open Detailed {type(entry).__name__} page'
-        )
+        open_action = menu.addAction(f"&Open Detailed {type(entry).__name__} page")
         # WeakPartialMethodSlot may not be needed, menus are transient
         open_action.triggered.connect(partial(self.open_page, entry))
         if isinstance(entry, Snapshot):
-            restore_page_action = menu.addAction('Inspect values')
+            restore_page_action = menu.addAction("Inspect values")
             restore_page_action.triggered.connect(partial(self.open_restore_page, entry))
 
         return menu
 
     def closeEvent(self, a0: QCloseEvent) -> None:
         try:
-            self.centralWidget().widget(1).model().stop_polling(wait_time=5000)
-            self.centralWidget().widget(1).close()
+            for pv_table in self.pv_tables_in_stack.values():
+                pv_table.model().stop_polling(wait_time=5000)
+                pv_table.close()
         except AttributeError:
             pass
         super().closeEvent(a0)
@@ -252,37 +286,140 @@ class NavigationPanel(QtWidgets.QWidget):
     sigBrowsePVs = QtCore.Signal()
     sigConfigureTags = QtCore.Signal()
     sigSave = QtCore.Signal()
+    sigExpandedChanged = QtCore.Signal(bool)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
         self.setLayout(QtWidgets.QVBoxLayout())
 
-        view_snapshots_button = QtWidgets.QPushButton()
-        view_snapshots_button.setIcon(qta.icon("ph.stack"))
-        view_snapshots_button.setText("View Snapshots")
-        view_snapshots_button.setFlat(True)
-        view_snapshots_button.clicked.connect(self.sigViewSnapshots.emit)
-        self.layout().addWidget(view_snapshots_button)
+        self.setStyleSheet(
+            """
+            QPushButton {
+                padding: 8px;
+                border-radius: 4px;
+                text-align: left;
+                border: none;
+            }
+            QPushButton:hover {
+                background-color: lightgray;
+            }
+            QPushButton#save-snapshot-btn {
+                border: 1px solid #555555;
+                background-color: white;
+            }
+            QPushButton#save-snapshot-btn:hover {
+                background-color: lightgray;
+            }
+            QPushButton[selected="true"] {
+                background-color: white;
+            }
+            QPushButton[icon-only="true"] {
+                text-align: center;
+            }
+        """
+        )
 
-        browse_pvs_button = QtWidgets.QPushButton()
-        browse_pvs_button.setIcon(qta.icon("ph.database"))
-        browse_pvs_button.setText("Browse PVs")
-        browse_pvs_button.setFlat(True)
-        browse_pvs_button.clicked.connect(self.sigBrowsePVs.emit)
-        self.layout().addWidget(browse_pvs_button)
+        self.expanded = True
 
-        configure_tags_button = QtWidgets.QPushButton()
-        configure_tags_button.setIcon(qta.icon("ph.tag"))
-        configure_tags_button.setText("Configure Tags")
-        configure_tags_button.setFlat(True)
-        configure_tags_button.clicked.connect(self.sigConfigureTags.emit)
-        self.layout().addWidget(configure_tags_button)
+        self.view_snapshots_button = QtWidgets.QPushButton()
+        self.view_snapshots_button.setIcon(qta.icon("ph.stack"))
+        self.view_snapshots_button.setIconSize(QtCore.QSize(24, 24))
+        self.view_snapshots_button.setText("View Snapshots")
+        self.view_snapshots_button.setFlat(True)
+        self.view_snapshots_button.setToolTip("View Snapshots")
+        self.view_snapshots_button.setProperty("icon-only", False)
+        self.view_snapshots_button.setProperty("selected", False)
+        self.view_snapshots_button.clicked.connect(self.sigViewSnapshots.emit)
+        self.layout().addWidget(self.view_snapshots_button)
+
+        self.browse_pvs_button = QtWidgets.QPushButton()
+        self.browse_pvs_button.setIcon(qta.icon("ph.database"))
+        self.browse_pvs_button.setIconSize(QtCore.QSize(24, 24))
+        self.browse_pvs_button.setText("Browse PVs")
+        self.browse_pvs_button.setFlat(True)
+        self.browse_pvs_button.setToolTip("Browse PVs")
+        self.browse_pvs_button.setProperty("icon-only", False)
+        self.browse_pvs_button.setProperty("selected", False)
+        self.browse_pvs_button.clicked.connect(self.sigBrowsePVs.emit)
+        self.layout().addWidget(self.browse_pvs_button)
+
+        self.configure_tags_button = QtWidgets.QPushButton()
+        self.configure_tags_button.setIcon(qta.icon("ph.tag"))
+        self.configure_tags_button.setIconSize(QtCore.QSize(24, 24))
+        self.configure_tags_button.setText("Configure Tags")
+        self.configure_tags_button.setFlat(True)
+        self.configure_tags_button.setToolTip("Configure Tags")
+        self.configure_tags_button.setProperty("icon-only", False)
+        self.configure_tags_button.setProperty("selected", False)
+        self.configure_tags_button.clicked.connect(self.sigConfigureTags.emit)
+        self.layout().addWidget(self.configure_tags_button)
+
+        self.nav_buttons = [self.view_snapshots_button, self.browse_pvs_button, self.configure_tags_button]
 
         self.layout().addStretch()
 
-        save_button = QtWidgets.QPushButton()
-        save_button.setIcon(qta.icon("ph.instagram-logo"))
-        save_button.setText("Save Snapshot")
-        save_button.clicked.connect(self.sigSave.emit)
-        self.layout().addWidget(save_button)
+        toggle_expand_layout = QtWidgets.QHBoxLayout()
+        self.toggle_expand_button = QtWidgets.QPushButton()
+        self.toggle_expand_button.setIcon(qta.icon("ph.arrow-line-left"))
+        self.toggle_expand_button.setIconSize(QtCore.QSize(24, 24))
+        self.toggle_expand_button.setFlat(True)
+        self.toggle_expand_button.setProperty("icon-only", False)
+        self.toggle_expand_button.clicked.connect(self.toggle_expanded)
+        toggle_expand_layout.addWidget(self.toggle_expand_button)
+        toggle_expand_layout.addStretch()
+        self.layout().addLayout(toggle_expand_layout)
+
+        self.save_button = QtWidgets.QPushButton()
+        self.save_button.setIcon(qta.icon("ph.instagram-logo"))
+        self.save_button.setIconSize(QtCore.QSize(24, 24))
+        self.save_button.setText("Save Snapshot")
+        self.save_button.setProperty("icon-only", False)
+        self.save_button.clicked.connect(self.sigSave.emit)
+        self.save_button.setObjectName("save-snapshot-btn")
+        self.layout().addWidget(self.save_button)
+
+    def set_nav_button_selected(self, nav_button: QtWidgets.QPushButton) -> None:
+        """Sets a nav button as selected and deselects the others.
+
+        Args:
+            nav_button (QtWidgets.QPushButton): The button to set as selected.
+        """
+        for button in self.nav_buttons:
+            button.setProperty("selected", True if button == nav_button else False)
+        self.reset_stylesheet()
+
+    def toggle_expanded(self) -> None:
+        """Toggles the expanded state of the nav panel"""
+        self.set_expanded(not self.expanded)
+
+    def set_expanded(self, value: bool) -> None:
+        """Sets the expanded state of the nav panel and redraws the buttons appropriately"""
+        if self.expanded != value:
+            self.expanded = value
+            if self.expanded:
+                self.toggle_expand_button.setIcon(qta.icon("ph.arrow-line-left"))
+                self.view_snapshots_button.setText("View Snapshots")
+                self.browse_pvs_button.setText("Browse PVs")
+                self.configure_tags_button.setText("Configure Tags")
+                self.save_button.setText("Save Snapshot")
+                for button in self.nav_buttons:
+                    button.setProperty("icon-only", False)
+                self.save_button.setProperty("icon-only", False)
+            else:
+                self.toggle_expand_button.setIcon(qta.icon("ph.arrow-line-right"))
+                for button in self.nav_buttons:
+                    button.setText("")
+                    button.setProperty("icon-only", True)
+                self.save_button.setText("")
+                self.save_button.setProperty("icon-only", True)
+
+            self.sigExpandedChanged.emit(self.expanded)
+            self.reset_stylesheet()
+
+    def reset_stylesheet(self) -> None:
+        """Clears then resets stylesheet to force recomputation. Needed when property
+        or object name driven styles should change."""
+        stylesheet = self.styleSheet()
+        self.setStyleSheet("")
+        self.setStyleSheet(stylesheet)
