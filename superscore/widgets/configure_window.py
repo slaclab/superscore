@@ -263,13 +263,15 @@ class TagGroupsWindow(QWidget):
     manage the tags within each group.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, client) -> None:
         """
         Initialize the tag groups window.
 
         Sets up the UI and initializes the data structure for storing tag groups.
         """
         super().__init__()
+        self.client = client
+
         self.permission_manager = PermissionManager.get_instance()
         self.permission_manager.admin_status_changed.connect(self.update_admin_status)
 
@@ -357,6 +359,10 @@ class TagGroupsWindow(QWidget):
 
         self.table.setShowGrid(False)
         self.original_edit_triggers = QTableWidget.NoEditTriggers
+
+
+        self.groups_data = self.client.backend.get_tags()
+        self.rebuild_table_from_data()
 
     def get_group_name_from_row(self, row: int) -> str:
         """
@@ -764,6 +770,8 @@ class TagGroupsWindow(QWidget):
                 count_item = self.table.item(row, 1)
                 if count_item:
                     count_item.setText(count_text)
+
+                self.client.backend.set_tags(self.groups_data)
 
             dialog: TagsDialog = TagsDialog(group_name, description, current_tags_dict if isinstance(current_tags_dict, dict) else None, self, save_group_data, is_admin=True)
         else:

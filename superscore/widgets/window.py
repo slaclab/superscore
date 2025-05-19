@@ -159,7 +159,7 @@ class Window(QtWidgets.QMainWindow, metaclass=QtSingleton):
 
     def open_tag_groups(self) -> None:
         """Open the tag groups configuration panel."""
-        tag_groups = TagGroupsWindow()
+        tag_groups = TagGroupsWindow(self.client)
 
         self.centralWidget().replaceWidget(1, tag_groups)
         self.centralWidget().setStretchFactor(1, 1)
