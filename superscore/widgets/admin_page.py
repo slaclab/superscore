@@ -172,6 +172,7 @@ class AdminPopupWindow(QDialog):
         cancel_button.clicked.connect(self.reject)
 
         button_layout: QHBoxLayout = QHBoxLayout()
+
         button_layout.addWidget(login_button)
         button_layout.addWidget(cancel_button)
 
@@ -215,6 +216,7 @@ class AdminPopupWindow(QDialog):
         close_button.clicked.connect(self.accept)
 
         button_layout: QHBoxLayout = QHBoxLayout()
+
         button_layout.addWidget(logout_button)
         button_layout.addWidget(close_button)
 
@@ -281,10 +283,12 @@ class AdminPopupWindow(QDialog):
             self.content_area.setCurrentIndex(0)
             self.email_field.clear()
             self.email_field.setFocus()
+
             try:
                 self.password_field.returnPressed.connect(self.try_login)
             except TypeError:
                 pass
+
 
     @staticmethod
     def show_admin_popup(parent=None, backend_api=None) -> 'AdminPopupWindow':

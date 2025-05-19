@@ -3,29 +3,34 @@ from typing import Callable, Dict, Optional, Union
 
 import qtawesome as qta
 from qtpy.QtCore import QModelIndex, Qt
-from qtpy.QtWidgets import (QAbstractItemView, QDialog, QFrame,
-                            QHBoxLayout, QHeaderView, QInputDialog, QLabel,
-                            QLineEdit, QMessageBox, QPushButton,
-                            QSizePolicy, QSpacerItem, QTableWidget,
-                            QTableWidgetItem, QVBoxLayout, QWidget)
+from qtpy.QtWidgets import (QAbstractItemView, QDialog, QFrame, QHBoxLayout,
+                            QHeaderView, QInputDialog, QLabel, QLineEdit,
+                            QMessageBox, QPushButton, QSizePolicy, QSpacerItem,
+                            QTableWidget, QTableWidgetItem, QVBoxLayout,
+                            QWidget)
+
 from superscore.permission_manager import PermissionManager
 
 
 class TagsDialog(QDialog):
     """
     Dialog for managing a tag group, including name, description and tags.
-    
+
     This dialog has two modes:
     1. Admin mode: Full editing capabilities for name, description, and tags
     2. Read-only mode: Just viewing the group information without editing
     """
 
-    def __init__(self, group_name: str, description: str, tags_dict: Optional[Dict[int, str]] = None, 
-                    parent: Optional[QWidget] = None,
-                    save_callback: Optional[Callable[[str, str, Dict[int, str]], None]] = None,
-                    is_admin: bool = False) -> None:
+    def __init__(self,
+                 group_name: str,
+                 description: str,
+                 tags_dict: Optional[Dict[int, str]] = None,
+                 parent: Optional[QWidget] = None,
+                 save_callback: Optional[Callable[[
+                     str, str, Dict[int, str]], None]] = None,
+                 is_admin: bool = False) -> None:
         super().__init__()
-        
+
         self.setWindowTitle("Tag Group")
         self.setMinimumSize(400, 500)
 
@@ -40,33 +45,33 @@ class TagsDialog(QDialog):
 
         name_label: QLabel = QLabel("Group Name")
         layout.addWidget(name_label)
-        
+
         if self.is_admin:
             self.name_input = QLineEdit(group_name)
         else:
             self.name_input = QLineEdit(group_name)
             self.name_input.setReadOnly(True)
             self.name_input.setStyleSheet("background-color: #f0f0f0;")
-        
+
         layout.addWidget(self.name_input)
-        
+
         desc_label: QLabel = QLabel("Description")
         layout.addWidget(desc_label)
-        
+
         if self.is_admin:
             self.desc_input = QLineEdit(description)
         else:
             self.desc_input = QLineEdit(description)
             self.desc_input.setReadOnly(True)
             self.desc_input.setStyleSheet("background-color: #f0f0f0;")
-        
+
         layout.addWidget(self.desc_input)
-        
+
         tags_label: QLabel = QLabel("Tags")
         layout.addWidget(tags_label)
 
         search_layout: QHBoxLayout = QHBoxLayout()
-        
+
         self.search_input = QLineEdit()
         self.search_input.setPlaceholderText("Search...")
         self.search_input.textChanged.connect(self.filter_tags)
@@ -76,24 +81,24 @@ class TagsDialog(QDialog):
             add_button: QPushButton = QPushButton("+ Add New Tag")
             add_button.clicked.connect(self.add_new_tag)
             search_layout.addWidget(add_button)
-        
+
         layout.addLayout(search_layout)
 
         self.tag_list = QTableWidget()
-        
+
         if self.is_admin:
             self.tag_list.setColumnCount(3)  # Tag, Edit, Delete
         else:
             self.tag_list.setColumnCount(1)  # Just Tag
-            
+
         self.tag_list.horizontalHeader().setSectionResizeMode(0, QHeaderView.Stretch)
-        
+
         if self.is_admin:
             self.tag_list.horizontalHeader().setSectionResizeMode(1, QHeaderView.Fixed)
             self.tag_list.setColumnWidth(1, 40)
             self.tag_list.horizontalHeader().setSectionResizeMode(2, QHeaderView.Fixed)
             self.tag_list.setColumnWidth(2, 40)
-            
+
         self.tag_list.horizontalHeader().setVisible(False)
         self.tag_list.verticalHeader().setVisible(False)
         self.tag_list.setSelectionBehavior(QAbstractItemView.SelectRows)
@@ -108,7 +113,7 @@ class TagsDialog(QDialog):
 
         button_layout = QHBoxLayout()
         button_layout.addStretch()
-        
+
         if self.is_admin:
             save_button = QPushButton("Save")
             save_button.setFixedWidth(80)
@@ -119,7 +124,7 @@ class TagsDialog(QDialog):
             close_button.setFixedWidth(80)
             close_button.clicked.connect(self.accept)
             button_layout.addWidget(close_button)
-        
+
         layout.addLayout(button_layout)
 
     def populate_tag_list(self) -> None:
@@ -239,14 +244,14 @@ class TagsDialog(QDialog):
         """
         new_name: str = self.name_input.text()
         new_desc: str = self.desc_input.text()
-        
+
         if not new_name:
             QMessageBox.warning(self, "Invalid Name", "Group name cannot be empty.")
             return
-        
+
         if self.save_callback:
             self.save_callback(new_name, new_desc, self.tags_dict)
-        
+
         self.accept()
 
 
@@ -302,7 +307,7 @@ class TagGroupsWindow(QWidget):
         self.new_group_button.clicked.connect(self.add_new_group)
 
         self.button_layout = h_layout
-        
+
         if self.permission_manager.is_admin():
             h_layout.addWidget(self.new_group_button)
 
@@ -732,7 +737,7 @@ class TagGroupsWindow(QWidget):
             The model index that was double-clicked
         """
         row = index.row()
-        
+
         group_name = self.get_group_name_from_row(row)
         description = self.get_description_from_row(row)
 
@@ -745,15 +750,15 @@ class TagGroupsWindow(QWidget):
         if is_admin:
             def save_group_data(new_name: str, new_desc: str, tags_dict: Dict[int, str]) -> None:
                 self.update_group_data(row, new_name, new_desc, tags_dict)
-                
+
                 group_button = self.table.cellWidget(row, 0)
                 if group_button:
                     group_button.setText(new_name)
-                    
+
                 desc_item = self.table.item(row, 2)
                 if desc_item:
                     desc_item.setText(new_desc)
-                    
+
                 tag_count: int = len(tags_dict)
                 count_text: str = f"{tag_count} {'Tags' if tag_count != 1 else 'Tag'}"
                 count_item = self.table.item(row, 1)
@@ -763,14 +768,14 @@ class TagGroupsWindow(QWidget):
             dialog: TagsDialog = TagsDialog(group_name, description, current_tags_dict if isinstance(current_tags_dict, dict) else None, self, save_group_data, is_admin=True)
         else:
             dialog: TagsDialog = TagsDialog(group_name, description, current_tags_dict if isinstance(current_tags_dict, dict) else None, self, is_admin=False)
-        
+
         dialog.exec_()
 
     def update_admin_status(self, is_admin: bool) -> None:
         """
         Update the UI based on the current admin status.
         This method is called when admin status changes.
-        
+
         Parameters
         ----------
         is_admin : bool
@@ -783,4 +788,3 @@ class TagGroupsWindow(QWidget):
             if self.new_group_button.parent():
                 self.button_layout.removeWidget(self.new_group_button)
                 self.new_group_button.setParent(None)
-                
