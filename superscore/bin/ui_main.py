@@ -7,9 +7,9 @@ import os
 import sys
 from typing import Optional
 
+from qtpy.QtCore import Qt
 from qtpy.QtGui import QColor, QPalette
 from qtpy.QtWidgets import QApplication
-from qtpy.QtCore import Qt
 
 from superscore.client import Client
 from superscore.widgets.window import Window
