@@ -15,12 +15,7 @@ from qtpy.QtGui import QCloseEvent
 from superscore.client import Client
 from superscore.model import Entry, Snapshot
 from superscore.widgets import ICON_MAP
-<<<<<<< Updated upstream
-from superscore.widgets.admin_page import AdminPage
-=======
 from superscore.widgets.admin_page import AdminPopupWindow
-from superscore.widgets.configure_window import TagGroupsWindow
->>>>>>> Stashed changes
 from superscore.widgets.core import DataWidget, QtSingleton
 from superscore.widgets.page import PAGE_MAP
 from superscore.widgets.page.collection_builder import CollectionBuilderPage
@@ -52,18 +47,10 @@ class Window(QtWidgets.QMainWindow, metaclass=QtSingleton):
         self.setup_ui()
 
     def setup_ui(self) -> None:
-<<<<<<< Updated upstream
-        navigation_panel = NavigationPanel()
-        navigation_panel.sigViewSnapshots.connect(self.open_snapshot_table)
-        navigation_panel.sigBrowsePVs.connect(self.open_pv_browser_page)
-        navigation_panel.sigAdmin.connect(self.open_admin_page)
-=======
         self.navigation_panel = NavigationPanel()
         self.navigation_panel.sigViewSnapshots.connect(self.open_snapshot_table)
         self.navigation_panel.sigBrowsePVs.connect(self.open_pv_browser_page)
         self.navigation_panel.sigAdmin.connect(self.open_admin_page)
-        self.navigation_panel.sigConfigureTags.connect(self.open_tag_groups)
->>>>>>> Stashed changes
 
         self.snapshot_table = QtWidgets.QTableView()
         self.snapshot_table.setModel(SnapshotTableModel(self.client))
@@ -146,7 +133,7 @@ class Window(QtWidgets.QMainWindow, metaclass=QtSingleton):
     def on_user_logged_in(self, username):
         print(f"User logged in: {username}")
         self.navigation_panel.status_label.setText(f"{username}")
-    
+
     def on_user_logged_out(self):
         print("User logged out")
         self.navigation_panel.status_label.setText("")
