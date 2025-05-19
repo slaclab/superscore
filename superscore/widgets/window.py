@@ -16,12 +16,7 @@ from qtpy.QtGui import QCloseEvent
 from superscore.client import Client
 from superscore.model import Entry, Snapshot
 from superscore.widgets import ICON_MAP
-<<<<<<< Updated upstream
-from superscore.widgets.admin_page import AdminPage
-=======
 from superscore.widgets.admin_page import AdminPopupWindow
-from superscore.widgets.configure_window import TagGroupsWindow
->>>>>>> Stashed changes
 from superscore.widgets.core import DataWidget, QtSingleton
 from superscore.widgets.page import PAGE_MAP
 from superscore.widgets.page.collection_builder import CollectionBuilderPage
@@ -54,6 +49,7 @@ class Window(QtWidgets.QMainWindow, metaclass=QtSingleton):
         self.setup_ui()
 
     def setup_ui(self) -> None:
+<<<<<<< HEAD
 <<<<<<< HEAD
         self.navigation_panel = self.init_nav_panel()
 
@@ -104,13 +100,18 @@ class Window(QtWidgets.QMainWindow, metaclass=QtSingleton):
 =======
 =======
 =======
+=======
+>>>>>>> 26dab2c (fixed an error when hitting the return key)
         self.navigation_panel = NavigationPanel()
         self.navigation_panel.sigViewSnapshots.connect(self.open_snapshot_table)
         self.navigation_panel.sigBrowsePVs.connect(self.open_pv_browser_page)
         self.navigation_panel.sigAdmin.connect(self.open_admin_page)
+<<<<<<< HEAD
         self.navigation_panel.sigConfigureTags.connect(self.open_tag_groups)
 >>>>>>> Stashed changes
 >>>>>>> 9bbb003 (updates to design of the admin page)
+=======
+>>>>>>> 26dab2c (fixed an error when hitting the return key)
 
         self.snapshot_table = QtWidgets.QTableView()
         self.snapshot_table.setModel(SnapshotTableModel(self.client))
@@ -189,14 +190,7 @@ class Window(QtWidgets.QMainWindow, metaclass=QtSingleton):
             self.main_content_stack.setCurrentWidget(self.snapshot_table)
             self.navigation_panel.set_nav_button_selected(self.navigation_panel.view_snapshots_button)
 
-<<<<<<< HEAD
-=======
-    def open_snapshot_table(self):
-        if self.centralWidget().widget(1) != self.snapshot_table:
-            self.centralWidget().replaceWidget(1, self.snapshot_table)
-
->>>>>>> 9000228 (formatting fixes)
-    def open_admin_page(self):
+    def open_admin_page(self) -> None:
         """open admin page"""
         dialog = AdminPopupWindow.show_admin_popup(self, backend_api=None)
         dialog.user_logged_in.connect(self.on_user_logged_in)
@@ -206,7 +200,7 @@ class Window(QtWidgets.QMainWindow, metaclass=QtSingleton):
     def on_user_logged_in(self, username):
         print(f"User logged in: {username}")
         self.navigation_panel.status_label.setText(f"{username}")
-    
+
     def on_user_logged_out(self):
         print("User logged out")
         self.navigation_panel.status_label.setText("")
