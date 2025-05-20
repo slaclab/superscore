@@ -198,11 +198,11 @@ class Window(QtWidgets.QMainWindow, metaclass=QtSingleton):
         dialog.exec_()
 
     def on_user_logged_in(self, username):
-        print(f"User logged in: {username}")
+        logger.debug(f"User logged in: {username}")
         self.navigation_panel.status_label.setText(f"{username}")
 
     def on_user_logged_out(self):
-        print("User logged out")
+        logger.debug("User logged out")
         self.navigation_panel.status_label.setText("")
 
     def open_snapshot(self, index: QtCore.Qt.QModelIndex) -> None:
