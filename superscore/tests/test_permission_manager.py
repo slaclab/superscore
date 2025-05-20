@@ -94,7 +94,7 @@ class TestPermissionManager:
         assert manager.is_admin() is True
         assert manager.get_admin_token() == "api_token"
         assert signal_received is True
-        assert mock_api.admin_login.called_once_with("admin@example.com", "password")
+        mock_api.admin_login.assert_called_once_with("admin@example.com", "password")
 
         manager.admin_status_changed.disconnect(on_admin_status_changed)
 

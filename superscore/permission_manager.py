@@ -84,6 +84,8 @@ class PermissionManager(QObject):
         When authentication is successful, the admin_status_changed signal is emitted
         with value True.
         """
+        success: bool = False
+
         if backend_api:
             result = backend_api.admin_login(email, password)
             success = result.get("success", False)
@@ -97,6 +99,7 @@ class PermissionManager(QObject):
         if success:
             self._is_admin = True
             self.admin_status_changed.emit(True)
+
         return success
 
     def admin_logout(self) -> None:
