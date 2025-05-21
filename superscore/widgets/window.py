@@ -402,9 +402,8 @@ class NavigationPanel(QtWidgets.QWidget):
         self.toggle_expand_button.setProperty("icon-only", False)
         self.toggle_expand_button.clicked.connect(self.toggle_expanded)
         toggle_expand_layout.addWidget(self.toggle_expand_button)
-        
 
-        self.admin_button: QPushButton = QtWidgets.QPushButton()
+        self.admin_button = QtWidgets.QPushButton()
         self.admin_button.setIcon(qta.icon("ri.admin-line"))
         self.admin_button.setFlat(True)
         self.admin_button.clicked.connect(self.sigAdmin.emit)
@@ -414,9 +413,9 @@ class NavigationPanel(QtWidgets.QWidget):
         toggle_expand_layout.addStretch(1)
         toggle_expand_layout.addWidget(self.admin_button, 0, QtCore.Qt.AlignRight)
         toggle_expand_layout.addWidget(self.status_label, 0, QtCore.Qt.AlignRight)
-        
+
         self.layout().addLayout(toggle_expand_layout)
-        
+
         self.save_button = QtWidgets.QPushButton()
         self.save_button.setIcon(qta.icon("ph.instagram-logo"))
         self.save_button.setIconSize(QtCore.QSize(24, 24))
@@ -474,4 +473,3 @@ class NavigationPanel(QtWidgets.QWidget):
         stylesheet = self.styleSheet()
         self.setStyleSheet("")
         self.setStyleSheet(stylesheet)
-
