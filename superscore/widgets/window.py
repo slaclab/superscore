@@ -15,6 +15,8 @@ from qtpy.QtGui import QCloseEvent
 from superscore.client import Client
 from superscore.model import Entry, Snapshot
 from superscore.widgets import ICON_MAP
+from superscore.widgets.admin_page import AdminPopupWindow
+from superscore.widgets.configure_window import TagGroupsWindow
 from superscore.widgets.core import DataWidget, QtSingleton
 from superscore.widgets.page import PAGE_MAP
 from superscore.widgets.page.collection_builder import CollectionBuilderPage
@@ -46,9 +48,11 @@ class Window(QtWidgets.QMainWindow, metaclass=QtSingleton):
         self.setup_ui()
 
     def setup_ui(self) -> None:
-        navigation_panel = NavigationPanel()
-        navigation_panel.sigViewSnapshots.connect(self.open_snapshot_table)
-        navigation_panel.sigBrowsePVs.connect(self.open_pv_browser_page)
+        self.navigation_panel = NavigationPanel()
+        self.navigation_panel.sigViewSnapshots.connect(self.open_snapshot_table)
+        self.navigation_panel.sigBrowsePVs.connect(self.open_pv_browser_page)
+        self.navigation_panel.sigAdmin.connect(self.open_admin_page)
+        self.navigation_panel.sigConfigureTags.connect(self.open_tag_groups)
 
         self.snapshot_table = QtWidgets.QTableView()
         self.snapshot_table.setModel(SnapshotTableModel(self.client))
@@ -68,7 +72,7 @@ class Window(QtWidgets.QMainWindow, metaclass=QtSingleton):
 
         splitter = QtWidgets.QSplitter(QtCore.Qt.Horizontal)
         splitter.setChildrenCollapsible(False)
-        splitter.addWidget(navigation_panel)
+        splitter.addWidget(self.navigation_panel)
         splitter.addWidget(self.snapshot_table)
         splitter.setStretchFactor(0, 0)
         splitter.setStretchFactor(1, 1)
@@ -91,7 +95,7 @@ class Window(QtWidgets.QMainWindow, metaclass=QtSingleton):
         search_bar = QtWidgets.QLineEdit(self.pv_browser_page)
         search_bar.setClearButtonEnabled(True)
         search_bar.addAction(
-            qta.icon("fa5s.search"),
+            qta.icon("fa5s.search", color='#555555'),
             QtWidgets.QLineEdit.LeadingPosition,
         )
         search_bar.textChanged.connect(pv_browser_filter.setFilterFixedString)
@@ -121,6 +125,21 @@ class Window(QtWidgets.QMainWindow, metaclass=QtSingleton):
         if self.centralWidget().widget(1) != self.snapshot_table:
             self.centralWidget().replaceWidget(1, self.snapshot_table)
 
+    def open_admin_page(self):
+        """open admin page"""
+        dialog = AdminPopupWindow.show_admin_popup(self, backend_api=None)
+        dialog.user_logged_in.connect(self.on_user_logged_in)
+        dialog.user_logged_out.connect(self.on_user_logged_out)
+        dialog.exec_()
+
+    def on_user_logged_in(self, username):
+        print(f"User logged in: {username}")
+        self.navigation_panel.status_label.setText(f"{username}")
+
+    def on_user_logged_out(self):
+        print("User logged out")
+        self.navigation_panel.status_label.setText("")
+
     def open_snapshot(self, index: QtCore.Qt.QModelIndex) -> None:
         snapshot = self.snapshot_table.model()._data[index.row()]
         pv_table = QtWidgets.QTableView()
@@ -136,6 +155,13 @@ class Window(QtWidgets.QMainWindow, metaclass=QtSingleton):
         header_view.setSectionResizeMode(PV_HEADER.PV.value, header_view.ResizeToContents)
 
         self.centralWidget().replaceWidget(1, pv_table)
+        self.centralWidget().setStretchFactor(1, 1)
+
+    def open_tag_groups(self) -> None:
+        """Open the tag groups configuration panel."""
+        tag_groups = TagGroupsWindow(self.client)
+
+        self.centralWidget().replaceWidget(1, tag_groups)
         self.centralWidget().setStretchFactor(1, 1)
 
     def remove_tab(self, tab_index: int) -> None:
@@ -252,6 +278,7 @@ class NavigationPanel(QtWidgets.QWidget):
     sigBrowsePVs = QtCore.Signal()
     sigConfigureTags = QtCore.Signal()
     sigSave = QtCore.Signal()
+    sigAdmin = QtCore.Signal()
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -259,21 +286,21 @@ class NavigationPanel(QtWidgets.QWidget):
         self.setLayout(QtWidgets.QVBoxLayout())
 
         view_snapshots_button = QtWidgets.QPushButton()
-        view_snapshots_button.setIcon(qta.icon("ph.stack"))
+        view_snapshots_button.setIcon(qta.icon("ph.stack", color='#555555'))
         view_snapshots_button.setText("View Snapshots")
         view_snapshots_button.setFlat(True)
         view_snapshots_button.clicked.connect(self.sigViewSnapshots.emit)
         self.layout().addWidget(view_snapshots_button)
 
         browse_pvs_button = QtWidgets.QPushButton()
-        browse_pvs_button.setIcon(qta.icon("ph.database"))
+        browse_pvs_button.setIcon(qta.icon("ph.database", color='#555555'))
         browse_pvs_button.setText("Browse PVs")
         browse_pvs_button.setFlat(True)
         browse_pvs_button.clicked.connect(self.sigBrowsePVs.emit)
         self.layout().addWidget(browse_pvs_button)
 
         configure_tags_button = QtWidgets.QPushButton()
-        configure_tags_button.setIcon(qta.icon("ph.tag"))
+        configure_tags_button.setIcon(qta.icon("ph.tag", color='#555555'))
         configure_tags_button.setText("Configure Tags")
         configure_tags_button.setFlat(True)
         configure_tags_button.clicked.connect(self.sigConfigureTags.emit)
@@ -281,8 +308,22 @@ class NavigationPanel(QtWidgets.QWidget):
 
         self.layout().addStretch()
 
+        admin_button = QtWidgets.QPushButton()
+        admin_button.setIcon(qta.icon("fa5.user-circle", color='#555555'))
+        admin_button.setFlat(True)
+        admin_button.clicked.connect(self.sigAdmin.emit)
+        self.status_label = QtWidgets.QLabel("")
+
+        h_layout = QtWidgets.QHBoxLayout()
+        h_layout.setSpacing(0)
+        h_layout.addStretch(1)
+        h_layout.addWidget(admin_button, 0, QtCore.Qt.AlignRight)
+        h_layout.addWidget(self.status_label, 0, QtCore.Qt.AlignRight)
+
+        self.layout().addLayout(h_layout)
+
         save_button = QtWidgets.QPushButton()
-        save_button.setIcon(qta.icon("ph.instagram-logo"))
+        save_button.setIcon(qta.icon("ph.instagram-logo", color='#555555'))
         save_button.setText("Save Snapshot")
         save_button.clicked.connect(self.sigSave.emit)
         self.layout().addWidget(save_button)
