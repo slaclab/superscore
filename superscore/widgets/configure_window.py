@@ -26,15 +26,15 @@ class TagsDialog(QDialog):
                  description: str,
                  tags_dict: Optional[Dict[int, str]] = None,
                  parent: Optional[QWidget] = None,
-                 save_callback: Optional[Callable[[
-                     str, str, Dict[int, str]], None]] = None,
-                 is_admin: bool = False) -> None:
-        super().__init__()
+                 save_callback: Optional[Callable[[str, str, Dict[int, str]], None]] = None,
+                 is_admin: bool = False,
+                 row_index: Optional[int] = None) -> None:
+        super().__init__(parent)
 
         self.setWindowTitle("Tag Group")
         self.setMinimumSize(400, 500)
-
         self.original_group_name = group_name
+        self.original_row = row_index
         self.tags_dict = tags_dict or {}
         self.save_callback = save_callback
         self.is_admin = is_admin
@@ -87,9 +87,9 @@ class TagsDialog(QDialog):
         self.tag_list = QTableWidget()
 
         if self.is_admin:
-            self.tag_list.setColumnCount(3)  # Tag, Edit, Delete
+            self.tag_list.setColumnCount(3)
         else:
-            self.tag_list.setColumnCount(1)  # Just Tag
+            self.tag_list.setColumnCount(1)
 
         self.tag_list.horizontalHeader().setSectionResizeMode(0, QHeaderView.Stretch)
 
@@ -249,6 +249,15 @@ class TagsDialog(QDialog):
             QMessageBox.warning(self, "Invalid Name", "Group name cannot be empty.")
             return
 
+        parent = self.parent()
+
+        print(parent.group_name_exists(new_name, self.original_row))
+        print(hasattr(parent, 'group_name_exists'))
+
+        if hasattr(parent, 'group_name_exists') and parent.group_name_exists(new_name, self.original_row):
+            QMessageBox.warning(self, "Duplicate Name", f"A group with the name '{new_name}' already exists.")
+            return
+
         if self.save_callback:
             self.save_callback(new_name, new_desc, self.tags_dict)
 
@@ -360,7 +369,6 @@ class TagGroupsWindow(QWidget):
         self.table.setShowGrid(False)
         self.original_edit_triggers = QTableWidget.NoEditTriggers
 
-
         self.groups_data = self.client.backend.get_tags()
         self.rebuild_table_from_data()
 
@@ -471,10 +479,18 @@ class TagGroupsWindow(QWidget):
             The row index of the newly added group
         """
         current_row = self.table.rowCount()
+
+        base_name = "New Group"
+        group_name = base_name
+        counter = 1
+
+        while self.group_name_exists(group_name):
+            counter += 1
+            group_name = f"{base_name} {counter}"
+
         self.table.insertRow(current_row)
         self.table.setRowHeight(current_row, 50)
 
-        group_name = f"New Group {current_row + 1}"
         description = "New group description"
 
         self.groups_data[current_row] = [group_name, description, {}]
@@ -493,6 +509,27 @@ class TagGroupsWindow(QWidget):
         self.table.setItem(current_row, 2, desc_item)
 
         return current_row
+
+    def group_name_exists(self, name: str, exclude_row: Optional[int] = None) -> bool:
+        """
+        Check if a group name already exists in the groups_data.
+
+        Parameters
+        ----------
+        name : str
+            The name to check
+        exclude_row : Optional[int], default None
+            Row to exclude from the check (useful when editing an existing group)
+
+        Returns
+        -------
+        bool
+            True if the name exists, False otherwise
+        """
+        for row, (group_name, _, _) in self.groups_data.items():
+            if row != exclude_row and group_name.lower() == name.lower():
+                return True
+        return False
 
     def toggle_edit_mode(self) -> None:
         """
@@ -553,6 +590,11 @@ class TagGroupsWindow(QWidget):
 
             if not new_name:
                 new_name = "Group"
+
+            if self.group_name_exists(new_name, current_row):
+                QMessageBox.warning(self, "Duplicate Name",
+                                    f"A group with the name '{new_name}' already exists.")
+                return
 
             desc_item = self.table.item(current_row, 2)
             description = desc_item.text() if desc_item else "No description"
@@ -773,9 +815,9 @@ class TagGroupsWindow(QWidget):
 
                 self.client.backend.set_tags(self.groups_data)
 
-            dialog: TagsDialog = TagsDialog(group_name, description, current_tags_dict if isinstance(current_tags_dict, dict) else None, self, save_group_data, is_admin=True)
+            dialog: TagsDialog = TagsDialog(group_name, description, current_tags_dict if isinstance(current_tags_dict, dict) else None, self, save_group_data, is_admin=True, row_index=row)
         else:
-            dialog: TagsDialog = TagsDialog(group_name, description, current_tags_dict if isinstance(current_tags_dict, dict) else None, self, is_admin=False)
+            dialog: TagsDialog = TagsDialog(group_name, description, current_tags_dict if isinstance(current_tags_dict, dict) else None, self, is_admin=False, row_index=row)
 
         dialog.exec_()
 
