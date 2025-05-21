@@ -289,7 +289,6 @@ class AdminPopupWindow(QDialog):
             except TypeError:
                 pass
 
-
     @staticmethod
     def show_admin_popup(parent=None, backend_api=None) -> 'AdminPopupWindow':
         """
