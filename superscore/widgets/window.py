@@ -16,6 +16,7 @@ from qtpy.QtGui import QCloseEvent
 from superscore.client import Client
 from superscore.model import Entry, Snapshot
 from superscore.widgets import ICON_MAP
+from superscore.widgets.admin_page import AdminPopupWindow
 from superscore.widgets.core import DataWidget, QtSingleton
 from superscore.widgets.page import PAGE_MAP
 from superscore.widgets.page.collection_builder import CollectionBuilderPage
@@ -78,12 +79,17 @@ class Window(QtWidgets.QMainWindow, metaclass=QtSingleton):
         navigation_panel = NavigationPanel()
         navigation_panel.sigViewSnapshots.connect(self.open_snapshot_table)
         navigation_panel.sigBrowsePVs.connect(self.open_pv_browser_page)
+        navigation_panel.sigAdmin.connect(self.open_admin_page)
         navigation_panel.set_nav_button_selected(navigation_panel.view_snapshots_button)
         navigation_panel.setSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Preferred)
         return navigation_panel
 
     def init_snapshot_table(self) -> QtWidgets.QTableView:
         """Initialize the snapshot page"""
+        snapshot_table = QtWidgets.QTableView()
+        snapshot_table.setModel(SnapshotTableModel(self.client))
+        snapshot_table.doubleClicked.connect(self.open_snapshot)
+
         snapshot_table = QtWidgets.QTableView()
         snapshot_table.setModel(SnapshotTableModel(self.client))
         snapshot_table.doubleClicked.connect(self.open_snapshot)
@@ -98,6 +104,19 @@ class Window(QtWidgets.QMainWindow, metaclass=QtSingleton):
         header_view.setSectionResizeMode(header_view.ResizeToContents)
         header_view.setSectionResizeMode(1, header_view.Stretch)
         return snapshot_table
+
+        self.init_pv_browser_page()
+
+        splitter = QtWidgets.QSplitter(QtCore.Qt.Horizontal)
+        splitter.setChildrenCollapsible(False)
+        splitter.addWidget(self.navigation_panel)
+        splitter.addWidget(self.snapshot_table)
+        splitter.setStretchFactor(0, 0)
+        splitter.setStretchFactor(1, 1)
+        self.setCentralWidget(splitter)
+
+        # open diff page
+        self.diff_dispatcher.comparison_ready.connect(self.open_diff_page)
 
     def init_pv_browser_page(self) -> QtWidgets.QWidget:
         """Initialize the PV browser page with the PV browser table."""
@@ -143,6 +162,21 @@ class Window(QtWidgets.QMainWindow, metaclass=QtSingleton):
         if self.main_content_stack.currentWidget() != self.snapshot_table:
             self.main_content_stack.setCurrentWidget(self.snapshot_table)
             self.navigation_panel.set_nav_button_selected(self.navigation_panel.view_snapshots_button)
+
+    def open_admin_page(self) -> None:
+        """open admin page"""
+        dialog = AdminPopupWindow.show_admin_popup(self, backend_api=None)
+        dialog.user_logged_in.connect(self.on_user_logged_in)
+        dialog.user_logged_out.connect(self.on_user_logged_out)
+        dialog.exec_()
+
+    def on_user_logged_in(self, username):
+        logger.debug(f"User logged in: {username}")
+        self.navigation_panel.status_label.setText(f"{username}")
+
+    def on_user_logged_out(self):
+        logger.debug("User logged out")
+        self.navigation_panel.status_label.setText("")
 
     def open_snapshot(self, index: QtCore.Qt.QModelIndex) -> None:
         """Opens the snapshot stored at the selected index. A widget representing the
@@ -287,6 +321,7 @@ class NavigationPanel(QtWidgets.QWidget):
     sigConfigureTags = QtCore.Signal()
     sigSave = QtCore.Signal()
     sigExpandedChanged = QtCore.Signal(bool)
+    sigAdmin = QtCore.Signal()
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -367,7 +402,18 @@ class NavigationPanel(QtWidgets.QWidget):
         self.toggle_expand_button.setProperty("icon-only", False)
         self.toggle_expand_button.clicked.connect(self.toggle_expanded)
         toggle_expand_layout.addWidget(self.toggle_expand_button)
-        toggle_expand_layout.addStretch()
+
+        self.admin_button = QtWidgets.QPushButton()
+        self.admin_button.setIcon(qta.icon("ri.admin-line"))
+        self.admin_button.setFlat(True)
+        self.admin_button.clicked.connect(self.sigAdmin.emit)
+        self.status_label = QtWidgets.QLabel("")
+
+        toggle_expand_layout.setSpacing(0)
+        toggle_expand_layout.addStretch(1)
+        toggle_expand_layout.addWidget(self.admin_button, 0, QtCore.Qt.AlignRight)
+        toggle_expand_layout.addWidget(self.status_label, 0, QtCore.Qt.AlignRight)
+
         self.layout().addLayout(toggle_expand_layout)
 
         self.save_button = QtWidgets.QPushButton()
@@ -406,6 +452,8 @@ class NavigationPanel(QtWidgets.QWidget):
                 for button in self.nav_buttons:
                     button.setProperty("icon-only", False)
                 self.save_button.setProperty("icon-only", False)
+                self.admin_button.show()
+                self.status_label.show()
             else:
                 self.toggle_expand_button.setIcon(qta.icon("ph.arrow-line-right"))
                 for button in self.nav_buttons:
@@ -413,6 +461,8 @@ class NavigationPanel(QtWidgets.QWidget):
                     button.setProperty("icon-only", True)
                 self.save_button.setText("")
                 self.save_button.setProperty("icon-only", True)
+                self.admin_button.hide()
+                self.status_label.hide()
 
             self.sigExpandedChanged.emit(self.expanded)
             self.reset_stylesheet()
