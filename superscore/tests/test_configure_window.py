@@ -96,7 +96,7 @@ def test_tagsdialog_populate_tag_list(app: QApplication) -> None:
 def test_tagsdialog_filter_tags(app: QApplication) -> None:
     """`filter_tags` narrows the table to the matching rows."""
     dlg = _dlg()
-    dlg.search_input.setText("on")  # matches “one” only
+    dlg.search_input.setText("on")
     dlg.filter_tags()
     assert dlg.tag_list.rowCount() == 1
     assert dlg.tag_list.item(0, 0).text() == "one"
@@ -208,7 +208,7 @@ def test_group_name_exists(window: TagGroupsWindow) -> None:
     assert window.group_name_exists("totally-unique") is False
 
 
-def test_toggle_edit_mode(window: TagGroupsWindow, qtbot) -> None:  # type: ignore[name-defined]
+def test_toggle_edit_mode(window: TagGroupsWindow, qtbot) -> None:
     """First click should put the row into *editing* state."""
     window.table.setColumnCount(4)
     btn = QPushButton("Edit")
@@ -243,7 +243,7 @@ def test_get_all_data(window: TagGroupsWindow) -> None:
 def test_save_and_load_data(tmp_path: Path, window: TagGroupsWindow) -> None:
     """Round-trip via JSON file preserves data."""
     file_ = tmp_path / "tags.json"
-    original = copy.deepcopy(window.groups_data)   # ← keep `int` keys intact
+    original = copy.deepcopy(window.groups_data)
 
     assert window.save_data(str(file_))
     window.groups_data.clear()
