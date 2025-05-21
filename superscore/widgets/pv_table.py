@@ -1,7 +1,7 @@
 from enum import Enum, auto
 from uuid import UUID
 
-from qtpy import QtCore, QtGui
+from qtpy import QtCore, QtGui, QtWidgets
 
 import superscore.color
 from superscore.model import Readback, Setpoint
@@ -60,10 +60,12 @@ class PVTableModel(LivePVTableModel):
 
     def __init__(self, snapshot_id: UUID, client, parent=None):
         self.client = client
-        self._data = list(self.client.search(
-            ("ancestor", "eq", snapshot_id),
-            ("entry_type", "eq", (Setpoint, Readback)),
-        ))
+        self._data = list(
+            self.client.search(
+                ("ancestor", "eq", snapshot_id),
+                ("entry_type", "eq", (Setpoint, Readback)),
+            )
+        )
         self._checked = set()
         super().__init__(client=client, entries=self._data, parent=parent)
 
@@ -74,10 +76,7 @@ class PVTableModel(LivePVTableModel):
         return len(PV_HEADER)
 
     def headerData(
-        self,
-        section: int,
-        orientation: QtCore.Qt.Orientation,
-        role: QtCore.Qt.ItemDataRole = QtCore.Qt.DisplayRole
+        self, section: int, orientation: QtCore.Qt.Orientation, role: QtCore.Qt.ItemDataRole = QtCore.Qt.DisplayRole
     ):
         if orientation == QtCore.Qt.Horizontal:
             if role == QtCore.Qt.DisplayRole:
@@ -90,11 +89,7 @@ class PVTableModel(LivePVTableModel):
         else:
             return super().flags(index)
 
-    def data(
-        self,
-        index: QtCore.QModelIndex,
-        role: QtCore.Qt.ItemDataRole = QtCore.Qt.DisplayRole
-    ):
+    def data(self, index: QtCore.QModelIndex, role: QtCore.Qt.ItemDataRole = QtCore.Qt.DisplayRole):
         entry = self._data[index.row()]
         column = PV_HEADER(index.column())
         if role == QtCore.Qt.DisplayRole:
@@ -110,11 +105,11 @@ class PVTableModel(LivePVTableModel):
                 elif column == PV_HEADER.SETPOINT:
                     return entry.data
                 elif column == PV_HEADER.LIVE_SETPOINT:
-                    return self._get_live_data_field(entry, 'data')
+                    return self._get_live_data_field(entry, "data")
                 elif column == PV_HEADER.READBACK:
                     return entry.readback.data if entry.readback else None
                 elif column == PV_HEADER.LIVE_READBACK:
-                    return self._get_live_data_field(entry.readback, 'data') if entry.readback else None
+                    return self._get_live_data_field(entry.readback, "data") if entry.readback else None
                 elif column == PV_HEADER.CONFIG:
                     return None
                 else:
@@ -133,7 +128,7 @@ class PVTableModel(LivePVTableModel):
                 elif column == PV_HEADER.READBACK:
                     return entry.data
                 elif column == PV_HEADER.LIVE_READBACK:
-                    return self._get_live_data_field(entry, 'data')
+                    return self._get_live_data_field(entry, "data")
                 elif column == PV_HEADER.CONFIG:
                     return None
                 else:
@@ -147,13 +142,6 @@ class PVTableModel(LivePVTableModel):
             return icon
         elif role == QtCore.Qt.ForegroundRole and column in [PV_HEADER.LIVE_SETPOINT, PV_HEADER.LIVE_READBACK]:
             return QtGui.QColor(superscore.color.BLUE)
-        elif role == QtCore.Qt.BackgroundRole and column == PV_HEADER.LIVE_SETPOINT:
-            stored_data = getattr(entry, 'data', None)
-            is_close = self.is_close(entry, stored_data)
-            if stored_data is not None and not is_close:
-                return QtGui.QColor(superscore.color.RED)
-            else:
-                return None
         elif role == QtCore.Qt.TextAlignmentRole and column not in [PV_HEADER.DEVICE, PV_HEADER.PV]:
             return QtCore.Qt.AlignCenter
         else:
@@ -167,3 +155,28 @@ class PVTableModel(LivePVTableModel):
                 self._checked.add(index.row())
             self.dataChanged.emit(index, index)
         return True
+
+
+class LiveSetpointBorderDelegate(QtWidgets.QStyledItemDelegate):
+    """
+    A delegate for drawing a border around the cell.
+    """
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+
+    def paint(self, painter, option, index):
+        super().paint(painter, option, index)
+        if self.needs_red_border(index):
+            print("Drawing border")
+            pen = QtGui.QPen(QtGui.QColor(superscore.color.RED), 2)
+            painter.save()
+            painter.setPen(pen)
+            painter.drawRect(option.rect.adjusted(1, 1, -1, -1))
+            painter.restore()
+
+    def needs_red_border(self, index):
+        model = index.model()
+        entry = model._data[index.row()]
+        stored_data = getattr(entry, "data", None)
+        return stored_data is not None and not model.is_close(entry, stored_data)

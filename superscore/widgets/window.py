@@ -24,7 +24,8 @@ from superscore.widgets.page.restore import RestorePage
 from superscore.widgets.page.search import SearchPage
 from superscore.widgets.pv_browser_table import (PVBrowserFilterProxyModel,
                                                  PVBrowserTableModel)
-from superscore.widgets.pv_table import PV_HEADER, PVTableModel
+from superscore.widgets.pv_table import (PV_HEADER, LiveSetpointBorderDelegate,
+                                         PVTableModel)
 from superscore.widgets.snapshot_table import SnapshotTableModel
 from superscore.widgets.views import DiffDispatcher
 
@@ -156,6 +157,7 @@ class Window(QtWidgets.QMainWindow, metaclass=QtSingleton):
             # table doesn't exist in stack, make it
             pv_table = QtWidgets.QTableView()
             pv_table.setModel(PVTableModel(snapshot.uuid, self.client))
+            pv_table.setItemDelegateForColumn(PV_HEADER.LIVE_SETPOINT.value, LiveSetpointBorderDelegate(pv_table))
             pv_table.destroyed.connect(pv_table.model().close)
             pv_table.setShowGrid(False)
             pv_table.verticalHeader().hide()
