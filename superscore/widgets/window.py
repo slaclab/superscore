@@ -49,8 +49,6 @@ class Window(QtWidgets.QMainWindow, metaclass=QtSingleton):
         self.setup_ui()
 
     def setup_ui(self) -> None:
-<<<<<<< HEAD
-<<<<<<< HEAD
         self.navigation_panel = self.init_nav_panel()
 
         # Initialize content pages and add to stack
@@ -78,15 +76,10 @@ class Window(QtWidgets.QMainWindow, metaclass=QtSingleton):
         self.diff_dispatcher.comparison_ready.connect(self.open_diff_page)
 
     def init_nav_panel(self) -> NavigationPanel:
-=======
-<<<<<<< Updated upstream
->>>>>>> 9bbb003 (updates to design of the admin page)
         navigation_panel = NavigationPanel()
         navigation_panel.sigViewSnapshots.connect(self.open_snapshot_table)
         navigation_panel.sigBrowsePVs.connect(self.open_pv_browser_page)
         navigation_panel.sigAdmin.connect(self.open_admin_page)
-<<<<<<< HEAD
-<<<<<<< HEAD
         navigation_panel.set_nav_button_selected(navigation_panel.view_snapshots_button)
         navigation_panel.setSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Preferred)
         return navigation_panel
@@ -96,28 +89,11 @@ class Window(QtWidgets.QMainWindow, metaclass=QtSingleton):
         snapshot_table = QtWidgets.QTableView()
         snapshot_table.setModel(SnapshotTableModel(self.client))
         snapshot_table.doubleClicked.connect(self.open_snapshot)
-        snapshot_table.setStyleSheet(
-=======
-=======
-=======
-=======
->>>>>>> 26dab2c (fixed an error when hitting the return key)
-        self.navigation_panel = NavigationPanel()
-        self.navigation_panel.sigViewSnapshots.connect(self.open_snapshot_table)
-        self.navigation_panel.sigBrowsePVs.connect(self.open_pv_browser_page)
-        self.navigation_panel.sigAdmin.connect(self.open_admin_page)
-<<<<<<< HEAD
-        self.navigation_panel.sigConfigureTags.connect(self.open_tag_groups)
->>>>>>> Stashed changes
->>>>>>> 9bbb003 (updates to design of the admin page)
-=======
->>>>>>> 26dab2c (fixed an error when hitting the return key)
 
-        self.snapshot_table = QtWidgets.QTableView()
-        self.snapshot_table.setModel(SnapshotTableModel(self.client))
-        self.snapshot_table.doubleClicked.connect(self.open_snapshot)
-        self.snapshot_table.setStyleSheet(
->>>>>>> 9000228 (formatting fixes)
+        snapshot_table = QtWidgets.QTableView()
+        snapshot_table.setModel(SnapshotTableModel(self.client))
+        snapshot_table.doubleClicked.connect(self.open_snapshot)
+        snapshot_table.setStyleSheet(
             "QTableView::item {"
             "    border: 0px;"  # required to enforce padding on left side of cell
             "    padding: 5px;"
@@ -127,9 +103,7 @@ class Window(QtWidgets.QMainWindow, metaclass=QtSingleton):
         header_view = snapshot_table.horizontalHeader()
         header_view.setSectionResizeMode(header_view.ResizeToContents)
         header_view.setSectionResizeMode(1, header_view.Stretch)
-<<<<<<< HEAD
         return snapshot_table
-=======
 
         self.init_pv_browser_page()
 
@@ -143,7 +117,6 @@ class Window(QtWidgets.QMainWindow, metaclass=QtSingleton):
 
         # open diff page
         self.diff_dispatcher.comparison_ready.connect(self.open_diff_page)
->>>>>>> 9bbb003 (updates to design of the admin page)
 
     def init_pv_browser_page(self) -> QtWidgets.QWidget:
         """Initialize the PV browser page with the PV browser table."""
@@ -429,24 +402,21 @@ class NavigationPanel(QtWidgets.QWidget):
         self.toggle_expand_button.setProperty("icon-only", False)
         self.toggle_expand_button.clicked.connect(self.toggle_expanded)
         toggle_expand_layout.addWidget(self.toggle_expand_button)
-        toggle_expand_layout.addStretch()
-        self.layout().addLayout(toggle_expand_layout)
+        
 
-        admin_button: QPushButton = QtWidgets.QPushButton()
-        admin_button.setIcon(qta.icon("ri.admin-line"))
-        admin_button.setFlat(True)
-        admin_button.clicked.connect(self.sigAdmin.emit)
+        self.admin_button: QPushButton = QtWidgets.QPushButton()
+        self.admin_button.setIcon(qta.icon("ri.admin-line"))
+        self.admin_button.setFlat(True)
+        self.admin_button.clicked.connect(self.sigAdmin.emit)
         self.status_label = QtWidgets.QLabel("")
 
-        h_layout: QHBoxLayout = QtWidgets.QHBoxLayout()
-        h_layout = QtWidgets.QHBoxLayout()
-        h_layout.setSpacing(0)
-        h_layout.addStretch(1)
-        h_layout.addWidget(admin_button, 0, QtCore.Qt.AlignRight)
-        h_layout.addWidget(self.status_label, 0, QtCore.Qt.AlignRight)
-
-        self.layout().addLayout(h_layout)
-
+        toggle_expand_layout.setSpacing(0)
+        toggle_expand_layout.addStretch(1)
+        toggle_expand_layout.addWidget(self.admin_button, 0, QtCore.Qt.AlignRight)
+        toggle_expand_layout.addWidget(self.status_label, 0, QtCore.Qt.AlignRight)
+        
+        self.layout().addLayout(toggle_expand_layout)
+        
         self.save_button = QtWidgets.QPushButton()
         self.save_button.setIcon(qta.icon("ph.instagram-logo"))
         self.save_button.setIconSize(QtCore.QSize(24, 24))
@@ -483,6 +453,8 @@ class NavigationPanel(QtWidgets.QWidget):
                 for button in self.nav_buttons:
                     button.setProperty("icon-only", False)
                 self.save_button.setProperty("icon-only", False)
+                self.admin_button.show()
+                self.status_label.show()
             else:
                 self.toggle_expand_button.setIcon(qta.icon("ph.arrow-line-right"))
                 for button in self.nav_buttons:
@@ -490,6 +462,8 @@ class NavigationPanel(QtWidgets.QWidget):
                     button.setProperty("icon-only", True)
                 self.save_button.setText("")
                 self.save_button.setProperty("icon-only", True)
+                self.admin_button.hide()
+                self.status_label.hide()
 
             self.sigExpandedChanged.emit(self.expanded)
             self.reset_stylesheet()
