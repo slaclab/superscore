@@ -1,4 +1,5 @@
 from enum import Enum, auto
+from typing import Iterable
 from uuid import UUID
 
 from qtpy import QtCore, QtGui
@@ -175,3 +176,7 @@ class PVTableModel(LivePVTableModel):
         ))
         self._checked = set()
         self.set_entries(self._data)
+
+    def get_selected_pvs(self) -> Iterable[Setpoint]:
+        """Return the Setpoints corresponding to checked rows in the table"""
+        return [self._data[i] for i in self._checked]
