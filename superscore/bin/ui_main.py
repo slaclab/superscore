@@ -47,7 +47,7 @@ def main(cfg_path: Optional[str] = None):
     app.setPalette(palette)
 
     app.setStyle("Fusion")
-    stylesheet_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "squirrel_light.qss")
+    stylesheet_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "squirrel_dark.qss")
 
     if os.path.exists(stylesheet_path):
         with open(stylesheet_path, "r") as f:

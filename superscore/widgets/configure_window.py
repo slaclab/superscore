@@ -32,7 +32,7 @@ class TagsDialog(QDialog):
         super().__init__(parent)
 
         self.setWindowTitle("Tag Group")
-        self.setMinimumSize(400, 500)
+        self.setMinimumSize(500, 600)
         self.original_group_name = group_name
         self.original_row = row_index
         self.tags_dict = tags_dict or {}
@@ -40,10 +40,10 @@ class TagsDialog(QDialog):
         self.is_admin = is_admin
 
         layout: QVBoxLayout = QVBoxLayout(self)
-        layout.setContentsMargins(20, 20, 20, 20)
-        layout.setSpacing(15)
+        layout.setContentsMargins(24, 24, 24, 24)
+        layout.setSpacing(20)
 
-        name_label: QLabel = QLabel("Group Name")
+        name_label: QLabel = QLabel("Title")
         layout.addWidget(name_label)
 
         if self.is_admin:
@@ -51,7 +51,7 @@ class TagsDialog(QDialog):
         else:
             self.name_input = QLineEdit(group_name)
             self.name_input.setReadOnly(True)
-            self.name_input.setStyleSheet("background-color: #f0f0f0;")
+            #self.name_input.setStyleSheet("background-color: #f0f0f0;")
 
         layout.addWidget(self.name_input)
 
@@ -63,7 +63,7 @@ class TagsDialog(QDialog):
         else:
             self.desc_input = QLineEdit(description)
             self.desc_input.setReadOnly(True)
-            self.desc_input.setStyleSheet("background-color: #f0f0f0;")
+            #self.desc_input.setStyleSheet("background-color: #f0f0f0;")
 
         layout.addWidget(self.desc_input)
 
@@ -102,7 +102,7 @@ class TagsDialog(QDialog):
         self.tag_list.horizontalHeader().setVisible(False)
         self.tag_list.verticalHeader().setVisible(False)
         self.tag_list.setSelectionBehavior(QAbstractItemView.SelectRows)
-        self.tag_list.setAlternatingRowColors(True)
+        #self.tag_list.setAlternatingRowColors(True)
         self.tag_list.setEditTriggers(QTableWidget.NoEditTriggers)
         self.tag_list.setShowGrid(False)
         self.tag_list.setFrameShape(QFrame.NoFrame)
@@ -303,9 +303,8 @@ class TagGroupsWindow(QWidget):
         header_layout.setContentsMargins(10, 10, 10, 10)
 
         title_label = QLabel("Tag Groups")
-        title_label.setStyleSheet("font-weight: bold;")
+        title_label.setStyleSheet("font-size: 18px; font-weight: bold; color: #e0e0e0; margin-bottom: 0px;")
         header_layout.addWidget(title_label)
-
         header_layout.addStretch()
 
         h_layout = QHBoxLayout()
@@ -355,7 +354,7 @@ class TagGroupsWindow(QWidget):
 
         main_layout.addWidget(main_frame)
 
-        self.table.setAlternatingRowColors(True)
+        #self.table.setAlternatingRowColors(True)
         self.table.setStyleSheet("""
             QTableWidget {
                 gridline-color: #ddd;
