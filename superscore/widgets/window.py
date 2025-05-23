@@ -17,6 +17,7 @@ from superscore.widgets.page.page import Page
 from superscore.widgets.page.snapshot_details import SnapshotDetailsPage
 from superscore.widgets.pv_browser_table import (PVBrowserFilterProxyModel,
                                                  PVBrowserTableModel)
+from superscore.widgets.pv_details_components import PVDetails, PVDetailsPopup
 from superscore.widgets.snapshot_table import SnapshotTableModel
 from superscore.widgets.views import DiffDispatcher
 
@@ -101,6 +102,9 @@ class Window(QtWidgets.QMainWindow, metaclass=QtSingleton):
         temp_index = self.snapshot_table.model().index(0, 0)
         first_snapshot = self.snapshot_table.model().index_to_snapshot(temp_index)
         snapshot_details_page = SnapshotDetailsPage(self, self.client, first_snapshot)
+        snapshot_details_page.snapshot_details_table.doubleClicked.connect(
+            lambda index: self.open_pv_details(index, snapshot_details_page.snapshot_details_table)
+        )
         snapshot_details_page.back_to_main_signal.connect(self.open_view_snapshot_page)
 
         return snapshot_details_page
@@ -131,6 +135,7 @@ class Window(QtWidgets.QMainWindow, metaclass=QtSingleton):
 
         self.pv_browser_table = QtWidgets.QTableView(pv_browser_page)
         self.pv_browser_table.setModel(pv_browser_filter)
+        self.pv_browser_table.doubleClicked.connect(lambda index: self.open_pv_details(index, self.pv_browser_table))
         self.pv_browser_table.verticalHeader().hide()
         header_view = self.pv_browser_table.horizontalHeader()
         header_view.setSectionResizeMode(header_view.ResizeToContents)
@@ -168,6 +173,35 @@ class Window(QtWidgets.QMainWindow, metaclass=QtSingleton):
         # Set snapshot header details
         self.snapshot_details_page.set_snapshot(new_snapshot)
         self.main_content_stack.setCurrentWidget(self.snapshot_details_page)
+
+    @QtCore.Slot(QtCore.QModelIndex)
+    def open_pv_details(self, index: QtCore.QModelIndex, view: QtWidgets.QAbstractItemView) -> None:
+        print("open_pv_details")
+        if not index.isValid():
+            logger.warning("Invalid index passed to open_pv_details")
+            return
+        pv_details = PVDetails(
+            pv_name="QUAD:LI21:401:EDES",
+            readback_name="QUAD:LI21:401:EACT",
+            description="This will be the description of the PV",
+            tolerance_abs=0.1,
+            tolerance_rel=0.01,
+            lolo=0.0,
+            low=0.1,
+            high=0.9,
+            hihi=1.0,
+            tags=None,
+        )
+        self.popup = PVDetailsPopup(pv_details)
+        self.popup.adjustSize()
+
+        table_top_right = view.mapToGlobal(view.rect().topRight())
+
+        x = table_top_right.x() - self.popup.width()
+        y = table_top_right.y()
+
+        self.popup.move(x, y)
+        self.popup.show()
 
     def closeEvent(self, a0: QCloseEvent) -> None:
         for page in self.pages:
