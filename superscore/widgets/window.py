@@ -101,19 +101,19 @@ class Window(QtWidgets.QMainWindow, metaclass=QtSingleton):
         view_snapshot_layout.addWidget(self.snapshot_table)
         return view_snapshot_page
 
-    def init_snapshot_details_page(self) -> Page:
+    def init_snapshot_details_page(self) -> SnapshotDetailsPage:
         """Initialize the snapshot details page with the first snapshot in the snapshot_model."""
         temp_index = self.snapshot_table.model().index(0, 0)
         first_snapshot = self.snapshot_table.model().index_to_snapshot(temp_index)
         snapshot_details_page = SnapshotDetailsPage(self, self.client, first_snapshot)
         snapshot_details_page.back_to_main_signal.connect(self.open_view_snapshot_page)
-        self.snapshot_details_page.comparison_signal.connect(self.open_comparison_page)
+        snapshot_details_page.comparison_signal.connect(self.open_comparison_page)
 
         return snapshot_details_page
 
-    def init_comparison_page(self) -> QtWidgets.QWidget:
+    def init_comparison_page(self) -> SnapshotComparisonPage:
         """Initialize the snapshot comparison page so it can be opened later."""
-        comparison_page = SnapshotComparisonPage(self)
+        comparison_page = SnapshotComparisonPage(self, self.client)
         comparison_page.remove_comparison_signal.connect(self.open_snapshot_details)
 
         return comparison_page
@@ -165,21 +165,23 @@ class Window(QtWidgets.QMainWindow, metaclass=QtSingleton):
             self.main_content_stack.setCurrentWidget(self.view_snapshot_page)
             self.navigation_panel.set_nav_button_selected(self.navigation_panel.view_snapshots_button)
 
+    @QtCore.Slot()
     @QtCore.Slot(QtCore.QModelIndex)
-    def open_snapshot_details(self, index: QtCore.QModelIndex) -> None:
+    def open_snapshot_details(self, index: QtCore.QModelIndex = None) -> None:
         """Opens the snapshot stored at the selected index. A widget representing the
         snapshot is created if necessary and set as the current view in the stack.
 
         Args:
             index (QtCore.Qt.QModelIndex): table index of the snapshot to open
         """
-        if not index.isValid():
-            logger.warning("Invalid index passed to open_snapshot_details")
-            return
-        new_snapshot = self.snapshot_table.model()._data[index.row()]
+        if isinstance(index, QtCore.QModelIndex):
+            if not index.isValid():
+                logger.warning("Invalid index passed to open_snapshot_details")
+                return
 
-        # Set snapshot header details
-        self.snapshot_details_page.set_snapshot(new_snapshot)
+            # Set new_snapshot in the details page
+            new_snapshot = self.snapshot_table.model()._data[index.row()]
+            self.snapshot_details_page.set_snapshot(new_snapshot)
 
         self.main_content_stack.setCurrentWidget(self.snapshot_details_page)
 
