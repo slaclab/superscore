@@ -129,7 +129,7 @@ class Window(QtWidgets.QMainWindow, metaclass=QtSingleton):
         search_bar = QtWidgets.QLineEdit(pv_browser_page)
         search_bar.setClearButtonEnabled(True)
         search_bar.addAction(
-            qta.icon("fa5s.search", color='#555555'),
+            qta.icon("fa5s.search"),
             QtWidgets.QLineEdit.LeadingPosition,
         )
         search_bar.textChanged.connect(pv_browser_filter.setFilterFixedString)

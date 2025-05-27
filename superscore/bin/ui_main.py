@@ -23,7 +23,6 @@ def main(cfg_path: Optional[str] = None):
         client = None
     main_window = Window(client=client)
 
-
     primary_screen = app.screens()[0]
     center = primary_screen.geometry().center()
     # move window rather creating a QRect because we want to include the frame geometry
