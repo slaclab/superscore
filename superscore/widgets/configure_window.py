@@ -287,10 +287,15 @@ class TagGroupsWindow(QWidget):
         self.setGeometry(100, 100, 800, 500)
         self.setWindowTitle("Tag Groups Manager")
 
+        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.setMinimumSize(600, 400)
+
         self.groups_data: dict[int, list[Union[str, str, dict[int, str]]]] = {}
 
+        self.setStyleSheet("background-color: #252525;")
+
         main_layout = QVBoxLayout(self)
-        main_layout.setContentsMargins(10, 10, 10, 10)
+        main_layout.setContentsMargins(0, 0, 0, 0)
 
         main_frame = QFrame()
         main_frame.setFrameShape(QFrame.StyledPanel)
@@ -300,7 +305,7 @@ class TagGroupsWindow(QWidget):
 
         header_widget = QWidget()
         header_layout = QHBoxLayout(header_widget)
-        header_layout.setContentsMargins(10, 10, 10, 10)
+        header_layout.setContentsMargins(4,4,4,4)
 
         title_label = QLabel("Tag Groups")
         title_label.setStyleSheet("font-size: 18px; font-weight: bold; color: #e0e0e0; margin-bottom: 0px;")
