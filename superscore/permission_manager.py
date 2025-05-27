@@ -141,3 +141,4 @@ class PermissionManager(QObject):
         if self.is_admin():
             return self._admin_token
         return None
+        
