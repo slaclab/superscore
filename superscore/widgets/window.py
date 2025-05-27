@@ -12,11 +12,15 @@ from qtpy import QtCore, QtWidgets
 from qtpy.QtGui import QCloseEvent
 
 from superscore.client import Client
+from superscore.control_layers._base_shim import EpicsData
+from superscore.model import Parameter, Readback, Setpoint
 from superscore.widgets.core import QtSingleton
 from superscore.widgets.page.page import Page
 from superscore.widgets.page.snapshot_details import SnapshotDetailsPage
 from superscore.widgets.pv_browser_table import (PVBrowserFilterProxyModel,
                                                  PVBrowserTableModel)
+from superscore.widgets.pv_details_components import PVDetails, PVDetailsPopup
+from superscore.widgets.pv_table import PVTableModel
 from superscore.widgets.snapshot_table import SnapshotTableModel
 from superscore.widgets.views import DiffDispatcher
 
@@ -101,6 +105,9 @@ class Window(QtWidgets.QMainWindow, metaclass=QtSingleton):
         temp_index = self.snapshot_table.model().index(0, 0)
         first_snapshot = self.snapshot_table.model().index_to_snapshot(temp_index)
         snapshot_details_page = SnapshotDetailsPage(self, self.client, first_snapshot)
+        snapshot_details_page.snapshot_details_table.doubleClicked.connect(
+            lambda index: self.open_pv_details(index, snapshot_details_page.snapshot_details_table)
+        )
         snapshot_details_page.back_to_main_signal.connect(self.open_view_snapshot_page)
 
         return snapshot_details_page
@@ -131,6 +138,7 @@ class Window(QtWidgets.QMainWindow, metaclass=QtSingleton):
 
         self.pv_browser_table = QtWidgets.QTableView(pv_browser_page)
         self.pv_browser_table.setModel(pv_browser_filter)
+        self.pv_browser_table.doubleClicked.connect(lambda index: self.open_pv_details(index, self.pv_browser_table))
         self.pv_browser_table.verticalHeader().hide()
         header_view = self.pv_browser_table.horizontalHeader()
         header_view.setSectionResizeMode(header_view.ResizeToContents)
@@ -168,6 +176,48 @@ class Window(QtWidgets.QMainWindow, metaclass=QtSingleton):
         # Set snapshot header details
         self.snapshot_details_page.set_snapshot(new_snapshot)
         self.main_content_stack.setCurrentWidget(self.snapshot_details_page)
+
+    @QtCore.Slot(QtCore.QModelIndex)
+    def open_pv_details(self, index: QtCore.QModelIndex, view: QtWidgets.QAbstractItemView) -> None:
+        if not index.isValid():
+            logger.warning("Invalid index passed to open_pv_details")
+            return
+        data: Parameter | Setpoint | Readback
+        if isinstance(index.model(), PVBrowserFilterProxyModel):
+            source_model = index.model().sourceModel()
+            source_index = index.model().mapToSource(index)
+            data = source_model._data[source_index.row()]
+        elif isinstance(index.model(), PVTableModel):
+            data = index.model()._data[index.row()]
+        else:
+            raise TypeError("Invalid model type passed to open_pv_details")
+
+        # Get data via the client for alarm limits
+        epics_data: EpicsData
+        epics_data = self.client.cl.get(data.pv_name)
+
+        pv_details = PVDetails(
+            pv_name=data.pv_name,
+            readback_name=data.readback.pv_name if getattr(data, "readback", None) else None,
+            description=data.description,
+            tolerance_abs=data.abs_tolerance if isinstance(data, Parameter) else None,
+            tolerance_rel=data.rel_tolerance if isinstance(data, Parameter) else None,
+            lolo=epics_data.lower_alarm_limit,
+            low=epics_data.lower_warning_limit,
+            high=epics_data.upper_warning_limit,
+            hihi=epics_data.upper_alarm_limit,
+            tags=None,
+        )
+        self.popup = PVDetailsPopup(pv_details)
+        self.popup.adjustSize()
+
+        table_top_right = view.mapToGlobal(view.rect().topRight())
+
+        x = table_top_right.x() - self.popup.width()
+        y = table_top_right.y()
+
+        self.popup.move(x, y)
+        self.popup.show()
 
     def closeEvent(self, a0: QCloseEvent) -> None:
         for page in self.pages:
