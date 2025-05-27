@@ -5,6 +5,7 @@ from superscore.client import Client
 from superscore.widgets.page.page import Page
 from superscore.widgets.pv_browser_table import (PVBrowserFilterProxyModel,
                                                  PVBrowserTableModel)
+from superscore.widgets.tag import TagsWidget
 
 
 class PVBrowserPage(Page):
@@ -44,6 +45,12 @@ class PVBrowserPage(Page):
         pv_browser_filter = PVBrowserFilterProxyModel()
         pv_browser_filter.setSourceModel(pv_browser_model)
         search_bar.editingFinished.connect(pv_browser_filter.setFilterFixedString)
+
+        tags_widget = TagsWidget(
+            tag_groups=self.client.backend.get_tags(),
+            enabled=True,
+        )
+        pv_browser_layout.addWidget(tags_widget)
 
         pv_browser_table = QtWidgets.QTableView(self)
         pv_browser_table.setModel(pv_browser_filter)
