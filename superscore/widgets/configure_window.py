@@ -1,6 +1,8 @@
 import json
 from typing import Callable, Dict, Optional, Union
 
+import logging
+
 import qtawesome as qta
 from qtpy.QtCore import QModelIndex, Qt
 from qtpy.QtWidgets import (QAbstractItemView, QDialog, QFrame, QHBoxLayout,
@@ -11,6 +13,7 @@ from qtpy.QtWidgets import (QAbstractItemView, QDialog, QFrame, QHBoxLayout,
 
 from superscore.permission_manager import PermissionManager
 
+logger = logging.getLogger(__name__)
 
 class TagsDialog(QDialog):
     """
@@ -51,7 +54,6 @@ class TagsDialog(QDialog):
         else:
             self.name_input = QLineEdit(group_name)
             self.name_input.setReadOnly(True)
-            #self.name_input.setStyleSheet("background-color: #f0f0f0;")
 
         layout.addWidget(self.name_input)
 
@@ -63,7 +65,6 @@ class TagsDialog(QDialog):
         else:
             self.desc_input = QLineEdit(description)
             self.desc_input.setReadOnly(True)
-            #self.desc_input.setStyleSheet("background-color: #f0f0f0;")
 
         layout.addWidget(self.desc_input)
 
@@ -102,7 +103,6 @@ class TagsDialog(QDialog):
         self.tag_list.horizontalHeader().setVisible(False)
         self.tag_list.verticalHeader().setVisible(False)
         self.tag_list.setSelectionBehavior(QAbstractItemView.SelectRows)
-        #self.tag_list.setAlternatingRowColors(True)
         self.tag_list.setEditTriggers(QTableWidget.NoEditTriggers)
         self.tag_list.setShowGrid(False)
         self.tag_list.setFrameShape(QFrame.NoFrame)
@@ -251,9 +251,6 @@ class TagsDialog(QDialog):
 
         parent = self.parent()
 
-        print(parent.group_name_exists(new_name, self.original_row))
-        print(hasattr(parent, 'group_name_exists'))
-
         if hasattr(parent, 'group_name_exists') and parent.group_name_exists(new_name, self.original_row):
             QMessageBox.warning(self, "Duplicate Name", f"A group with the name '{new_name}' already exists.")
             return
@@ -359,7 +356,6 @@ class TagGroupsWindow(QWidget):
 
         main_layout.addWidget(main_frame)
 
-        #self.table.setAlternatingRowColors(True)
         self.table.setStyleSheet("""
             QTableWidget {
                 gridline-color: #ddd;
@@ -450,7 +446,7 @@ class TagGroupsWindow(QWidget):
             True if the row was deleted, False otherwise
         """
         if row < 0 or row >= self.table.rowCount():
-            print(f"Invalid row index: {row}")
+            logger.warning(f"Invalid row index: {row}")
             return False
 
         group_name = self.get_group_name_from_row(row)
@@ -688,7 +684,7 @@ class TagGroupsWindow(QWidget):
                           if isinstance(o, set) else o)
             return True
         except Exception as e:
-            print(f"Error saving data: {e}")
+            logger.debug(f"Error saving data: {e}")
             return False
 
     def load_data(self, filename: str) -> bool:
@@ -714,7 +710,7 @@ class TagGroupsWindow(QWidget):
             self.rebuild_table_from_data()
             return True
         except Exception as e:
-            print(f"Error loading data: {e}")
+            logger.debug(f"Error loading data: {e}")
             return False
 
     def rebuild_table_from_data(self) -> None:

@@ -10,6 +10,7 @@ import asyncio
 import importlib
 import logging
 from inspect import iscoroutinefunction
+from superscore.permission_manager import PermissionManager  
 
 import superscore
 
@@ -85,17 +86,31 @@ def main():
         help='Python logging level (e.g. DEBUG, INFO, WARNING)'
     )
 
+    top_parser.add_argument(
+        '-a', '--admin', 
+        action='store_true',
+        help='Launch with admin privileges enabled'
+    )
+
+
     subparsers = top_parser.add_subparsers(help='Possible subcommands')
     for command_name, (build_func, main) in COMMANDS.items():
         sub = subparsers.add_parser(command_name)
         build_func(sub)
         sub.set_defaults(func=main)
 
+
     args = top_parser.parse_args()
     kwargs = vars(args)
     log_level = kwargs.pop('log_level')
-
+    admin_mode = kwargs.pop('admin')
     logger.setLevel(log_level)
+    
+    if admin_mode:
+        permission_manager = PermissionManager.get_instance()
+        permission_manager.set_admin_mode(True)
+        logger.info("Admin mode enabled via launch flag")
+
     if hasattr(args, 'func'):
         func = kwargs.pop('func')
         logger.debug('%s(**%r)', func.__name__, kwargs)
