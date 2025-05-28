@@ -14,6 +14,7 @@ from qtpy.QtGui import QCloseEvent
 
 from superscore.client import Client
 from superscore.model import Snapshot
+from superscore.widgets.configure_window import TagGroupsWindow
 from superscore.widgets.core import NameDescTagsWidget, QtSingleton
 from superscore.widgets.page.page import Page
 from superscore.widgets.page.snapshot_details import SnapshotDetailsPage
@@ -48,11 +49,12 @@ class Window(QtWidgets.QMainWindow, metaclass=QtSingleton):
         self.snapshot_details_page = self.init_snapshot_details_page()
         self.pages.add(self.snapshot_details_page)
         self.pv_browser_page = self.init_pv_browser_page()
-
+        self.configure_page = self.init_configure_page()
         self.main_content_stack = QtWidgets.QStackedLayout()
         self.main_content_stack.addWidget(self.view_snapshot_page)
         self.main_content_stack.addWidget(self.snapshot_details_page)
         self.main_content_stack.addWidget(self.pv_browser_page)
+        self.main_content_stack.addWidget(self.configure_page)
         self.main_content_stack.setCurrentWidget(self.view_snapshot_page)
         self.main_content_container = QtWidgets.QWidget()
         self.main_content_container.setContentsMargins(0, 0, 0, 0)
@@ -72,6 +74,7 @@ class Window(QtWidgets.QMainWindow, metaclass=QtSingleton):
         navigation_panel.sigViewSnapshots.connect(self.open_view_snapshot_page)
         navigation_panel.sigBrowsePVs.connect(self.open_pv_browser_page)
         navigation_panel.sigSave.connect(self.take_snapshot)
+        navigation_panel.sigConfigureTags.connect(self.open_configure_page)
         navigation_panel.set_nav_button_selected(navigation_panel.view_snapshots_button)
         navigation_panel.setSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Preferred)
         return navigation_panel
@@ -141,6 +144,19 @@ class Window(QtWidgets.QMainWindow, metaclass=QtSingleton):
         pv_browser_layout.addWidget(self.pv_browser_table)
         return pv_browser_page
 
+    def init_configure_page(self) -> QtWidgets.QWidget:
+        """Initialize the configure page with the tag groups window."""
+        configure_page = QtWidgets.QWidget()
+        configure_layout = QtWidgets.QVBoxLayout()
+        configure_layout.setContentsMargins(0, 11, 0, 0)
+        configure_page.setLayout(configure_layout)
+
+        self.tag_groups_window = TagGroupsWindow(self.client)
+        self.tag_groups_window.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Preferred)
+        configure_layout.addWidget(self.tag_groups_window)
+
+        return configure_page
+
     @QtCore.Slot()
     def open_pv_browser_page(self) -> None:
         """Open the PV Browser Page if it is not already open."""
@@ -154,6 +170,13 @@ class Window(QtWidgets.QMainWindow, metaclass=QtSingleton):
         if self.main_content_stack.currentWidget() != self.view_snapshot_page:
             self.main_content_stack.setCurrentWidget(self.view_snapshot_page)
             self.navigation_panel.set_nav_button_selected(self.navigation_panel.view_snapshots_button)
+
+    @QtCore.Slot()
+    def open_configure_page(self) -> None:
+        """Open the configure page if it is not already open."""
+        if self.main_content_stack.currentWidget() != self.configure_page:
+            self.main_content_stack.setCurrentWidget(self.configure_page)
+            self.navigation_panel.set_nav_button_selected(self.navigation_panel.configure_tags_button)
 
     @QtCore.Slot(QtCore.QModelIndex)
     def open_snapshot_index(self, index: QtCore.Qt.QModelIndex) -> None:
