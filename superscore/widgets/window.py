@@ -14,10 +14,10 @@ from qtpy.QtGui import QCloseEvent
 
 from superscore.client import Client
 from superscore.model import Snapshot
+from superscore.widgets.configure_window import TagGroupsWindow
 from superscore.widgets.core import NameDescTagsWidget, QtSingleton
 from superscore.widgets.page.page import Page
 from superscore.widgets.page.snapshot_details import SnapshotDetailsPage
-from superscore.widgets.configure_window import TagGroupsWindow
 from superscore.widgets.pv_browser_table import (PVBrowserFilterProxyModel,
                                                  PVBrowserTableModel)
 from superscore.widgets.snapshot_table import SnapshotTableModel

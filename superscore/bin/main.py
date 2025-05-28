@@ -10,9 +10,9 @@ import asyncio
 import importlib
 import logging
 from inspect import iscoroutinefunction
-from superscore.permission_manager import PermissionManager  
 
 import superscore
+from superscore.permission_manager import PermissionManager
 
 logger = logging.getLogger('superscore')
 
@@ -87,11 +87,10 @@ def main():
     )
 
     top_parser.add_argument(
-        '-a', '--admin', 
+        '-a', '--admin',
         action='store_true',
         help='Launch with admin privileges enabled'
     )
-
 
     subparsers = top_parser.add_subparsers(help='Possible subcommands')
     for command_name, (build_func, main) in COMMANDS.items():
@@ -99,13 +98,12 @@ def main():
         build_func(sub)
         sub.set_defaults(func=main)
 
-
     args = top_parser.parse_args()
     kwargs = vars(args)
     log_level = kwargs.pop('log_level')
     admin_mode = kwargs.pop('admin')
     logger.setLevel(log_level)
-    
+
     if admin_mode:
         permission_manager = PermissionManager.get_instance()
         permission_manager.set_admin_mode(True)

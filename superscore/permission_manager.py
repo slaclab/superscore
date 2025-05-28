@@ -145,7 +145,7 @@ class PermissionManager(QObject):
     def set_admin_mode(self, enabled: bool = True) -> None:
         """
         Directly set admin mode.
-        
+
         Parameters
         ----------
         enabled : bool, optional

@@ -1,7 +1,6 @@
 import json
-from typing import Callable, Dict, Optional, Union
-
 import logging
+from typing import Callable, Dict, Optional, Union
 
 import qtawesome as qta
 from qtpy.QtCore import QModelIndex, Qt
@@ -14,6 +13,7 @@ from qtpy.QtWidgets import (QAbstractItemView, QDialog, QFrame, QHBoxLayout,
 from superscore.permission_manager import PermissionManager
 
 logger = logging.getLogger(__name__)
+
 
 class TagsDialog(QDialog):
     """
@@ -302,7 +302,7 @@ class TagGroupsWindow(QWidget):
 
         header_widget = QWidget()
         header_layout = QHBoxLayout(header_widget)
-        header_layout.setContentsMargins(4,4,4,4)
+        header_layout.setContentsMargins(4, 4, 4, 4)
 
         title_label = QLabel("Tag Groups")
         title_label.setStyleSheet("font-size: 18px; font-weight: bold; color: #e0e0e0; margin-bottom: 0px;")
