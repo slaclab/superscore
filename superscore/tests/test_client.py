@@ -17,7 +17,7 @@ from superscore.model import (Collection, Entry, Nestable, Parameter, Readback,
 from superscore.tests.conftest import (MockTaskStatus, nest_depth,
                                        setup_test_stack)
 
-SAMPLE_CFG = Path(__file__).parent / 'config.cfg'
+SAMPLE_CFG = Path(__file__).parent / 'demo.cfg'
 
 
 @pytest.fixture(scope='function')
@@ -143,7 +143,7 @@ def test_snap_RO(get_mock, test_client: Client, sample_database_fixture: Root):
 
 def test_from_cfg(sscore_cfg: str):
     client = Client.from_config()
-    assert isinstance(client.backend, FilestoreBackend)
+    assert isinstance(client.backend, DirectoryBackend)
     assert 'ca' in client.cl.shims
 
 
