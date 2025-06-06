@@ -85,7 +85,7 @@ class SearchPage(Display, QtWidgets.QWidget, WindowLinker):
         self.results_table_view.setModel(self.proxy_model)
         self.results_table_view.setSortingEnabled(True)
         horiz_header = self.results_table_view.horizontalHeader()
-        horiz_header.setSectionResizeMode(horiz_header.Interactive)
+        horiz_header.setSectionResizeMode(horiz_header.ResizeMode.Interactive)
 
         self.open_delegate = ButtonDelegate(button_text='open me')
         self.results_table_view.setItemDelegateForColumn(ResultsHeader.OPEN,
