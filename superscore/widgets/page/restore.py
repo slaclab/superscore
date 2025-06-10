@@ -149,7 +149,7 @@ class RestorePage(Display, QtWidgets.QWidget):
         self.tableView.set_live(False)
 
         header = self.tableView.horizontalHeader()
-        header.setSectionResizeMode(header.Stretch)
+        header.setSectionResizeMode(header.ResizeMode.Stretch)
 
         self.primarySnapshotLabel.setText("Viewing:")
         self.primarySnapshotTitle.setText(data.title)

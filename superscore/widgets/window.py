@@ -110,8 +110,8 @@ class Window(QtWidgets.QMainWindow, metaclass=QtSingleton):
         )
         self.snapshot_table.verticalHeader().hide()
         header_view = self.snapshot_table.horizontalHeader()
-        header_view.setSectionResizeMode(header_view.ResizeToContents)
-        header_view.setSectionResizeMode(1, header_view.Stretch)
+        header_view.setSectionResizeMode(header_view.ResizeMode.ResizeToContents)
+        header_view.setSectionResizeMode(1, header_view.ResizeMode.Stretch)
         view_snapshot_layout.addWidget(self.snapshot_table)
         return view_snapshot_page
 
@@ -165,7 +165,7 @@ class Window(QtWidgets.QMainWindow, metaclass=QtSingleton):
         self.pv_browser_table.doubleClicked.connect(lambda index: self.open_pv_details(index, self.pv_browser_table))
         self.pv_browser_table.verticalHeader().hide()
         header_view = self.pv_browser_table.horizontalHeader()
-        header_view.setSectionResizeMode(header_view.ResizeToContents)
+        header_view.setSectionResizeMode(header_view.ResizeMode.ResizeToContents)
         header_view.setStretchLastSection(True)
         pv_browser_layout.addWidget(self.pv_browser_table)
         return pv_browser_page

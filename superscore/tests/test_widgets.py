@@ -62,7 +62,7 @@ def test_tags_widget(qtbot):
     assert len(chip.tags) == 0
 
     selection_model = chip.editor.choice_list.selectionModel()
-    Select = selection_model.Select
+    Select = selection_model.SelectionFlag.Select
     index = selection_model.model().index(0, 0)
     selection_model.select(index, Select)
     index = selection_model.model().index(1, 0)
@@ -71,7 +71,7 @@ def test_tags_widget(qtbot):
     assert "SXR" in chip.tags_label.text()
     assert "HXR" in chip.tags_label.text()
 
-    Deselect = selection_model.Deselect
+    Deselect = selection_model.SelectionFlag.Deselect
     selection_model.select(index, Deselect)
     assert len(chip.tags) == 1
     assert "SXR" in chip.tags_label.text()
