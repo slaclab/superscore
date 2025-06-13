@@ -4,7 +4,7 @@ import qtawesome as qta
 from qtpy import QtCore, QtWidgets
 
 import superscore.color
-from superscore.type_hints import TagDef
+from superscore.type_hints import TagDef, TagSet
 from superscore.widgets import FlowLayout
 
 
@@ -23,6 +23,9 @@ class TagsWidget(QtWidgets.QWidget):
     tag_list_layout : FlowLayout
         The layout containing the widget's tag elements.
     """
+
+    tagSetChanged = QtCore.Signal(dict)
+
     def __init__(
         self,
         *args: Any,
@@ -55,6 +58,25 @@ class TagsWidget(QtWidgets.QWidget):
 
         self.set_tag_groups(tag_groups)
 
+    @property
+    def tag_chips(self) -> set["TagChip"]:
+        _chips = set()
+        layout = self.layout()
+        for index in range(layout.count()):
+            chip = layout.itemAt(index).widget()
+            if isinstance(chip, TagChip):
+                _chips.add(chip)
+
+        return _chips
+
+    @property
+    def tag_set(self) -> TagSet:
+        _tag_set = {}
+        for chip in self.tag_chips:
+            if chip.tags:
+                _tag_set[chip.tag_group] = chip.tags
+        return _tag_set
+
     def set_tag_groups(self, tag_groups: TagDef) -> None:
         while self.layout().count() > 0:
             self.layout().takeAt(0)
@@ -66,6 +88,11 @@ class TagsWidget(QtWidgets.QWidget):
                 desc=details[1],
                 enabled=self.isEnabled())
             self.layout().addWidget(chip)
+            chip.tagsChanged.connect(self.emit_tag_set_changed)
+
+    @QtCore.Slot()
+    def emit_tag_set_changed(self):
+        self.tagSetChanged.emit(self.tag_set)
 
 
 class TagChip(QtWidgets.QFrame):
@@ -92,6 +119,9 @@ class TagChip(QtWidgets.QFrame):
     **kwargs : Any
         Additional keyword arguments to pass to the base QWidget.
     """
+
+    tagsChanged = QtCore.Signal(set)
+
     def __init__(self, tag_group: int, choices: dict[int, str], tag_name: str, desc: str = "", enabled: bool = False, **kwargs: Any) -> None:
         super().__init__(**kwargs)
 
@@ -202,6 +232,7 @@ class TagChip(QtWidgets.QFrame):
         self.tags = tags
         self.setProperty("empty", len(self.tags) == 0)
         self.redraw()
+        self.tagsChanged.emit(self.tags)
 
     def clear(self) -> None:
         """Clear this widget's active tags."""
