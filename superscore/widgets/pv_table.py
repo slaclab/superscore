@@ -1,11 +1,11 @@
 from enum import Enum, auto
-from typing import Iterable
+from typing import Iterable, Union
 from uuid import UUID
 
 from qtpy import QtCore, QtGui
 
 import superscore.color
-from superscore.model import Readback, Setpoint
+from superscore.model import Readback, Setpoint, Snapshot
 from superscore.widgets import SEVERITY_ICONS
 from superscore.widgets.views import LivePVTableModel
 
@@ -59,14 +59,9 @@ class PVTableModel(LivePVTableModel):
     for selecting rows.
     """
 
-    def __init__(self, snapshot_id: UUID, client, parent=None):
-        self.client = client
-        self._data = list(self.client.search(
-            ("ancestor", "eq", snapshot_id),
-            ("entry_type", "eq", (Setpoint, Readback)),
-        ))
-        self._checked = set()
-        super().__init__(client=client, entries=self._data, parent=parent)
+    def __init__(self, snapshot: Union[UUID, Snapshot], client, parent=None):
+        super().__init__(client=client, entries=[], parent=parent)
+        self.set_snapshot(snapshot)
 
     def rowCount(self, parent=None):
         return len(self._data)
@@ -199,11 +194,14 @@ class PVTableModel(LivePVTableModel):
             self.dataChanged.emit(index, index)
         return True
 
-    def set_snapshot(self, snapshot_id: UUID) -> None:
-        self._data = list(self.client.search(
-            ("ancestor", "eq", snapshot_id),
-            ("entry_type", "eq", (Setpoint, Readback)),
-        ))
+    def set_snapshot(self, snapshot: Union[UUID, Snapshot]) -> None:
+        try:
+            self._data = snapshot.children
+        except AttributeError:
+            self._data = list(self.client.search(
+                ("ancestor", "eq", snapshot),
+                ("entry_type", "eq", (Setpoint, Readback)),
+            ))
         self._checked = set()
         self.set_entries(self._data)
 
