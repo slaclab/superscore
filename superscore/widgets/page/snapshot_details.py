@@ -122,7 +122,7 @@ class SnapshotDetailsPage(Page):
         if self.snapshot.uuid in self.pv_table_models:
             self.snapshot_details_model = self.pv_table_models[self.snapshot.uuid]
         else:
-            self.snapshot_details_model = PVTableModel(self.snapshot.uuid, self.client)
+            self.snapshot_details_model = PVTableModel(self.snapshot, self.client)
             self.pv_table_models[self.snapshot.uuid] = self.snapshot_details_model
         self.snapshot_details_table.setModel(self.snapshot_details_model)
 
