@@ -30,7 +30,7 @@ def pv_table_model(
 
     """Minimal PVTableModel"""
     model = PVTableModel(
-        snapshot_id=simple_snapshot_fixture.uuid,
+        snapshot=simple_snapshot_fixture.uuid,
         client=test_client,
     )
 
