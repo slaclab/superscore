@@ -153,7 +153,11 @@ class Client:
                         logger.debug("Found configuration file at %r", full_path)
                         return full_path
         # If found nothing
-        raise OSError("No superscore configuration file found. Check SUPERSCORE_CFG.")
+        default_config = os.path.join(os.path.dirname(__file__), "tests/demo.cfg")
+        if os.path.isfile(default_config):
+            return default_config
+        else:
+            raise OSError("No superscore configuration file found")
 
     def search(self, *post: SearchTermType) -> Generator[Entry, None, None]:
         """
