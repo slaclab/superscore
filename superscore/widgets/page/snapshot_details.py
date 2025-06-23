@@ -1,3 +1,5 @@
+from typing import Optional
+
 import qtawesome as qta
 from qtpy import QtCore, QtWidgets
 
@@ -15,7 +17,12 @@ class SnapshotDetailsPage(Page):
     back_to_main_signal = QtCore.Signal()
     comparison_signal = QtCore.Signal(object, object)
 
-    def __init__(self, parent: QtWidgets.QWidget, client: Client, init_snapshot: Snapshot):
+    def __init__(
+        self,
+        parent: QtWidgets.QWidget,
+        client: Client,
+        snapshot: Optional[Snapshot] = None,
+    ):
         """Initialize the snapshot details page.
 
         Parameters
@@ -24,14 +31,16 @@ class SnapshotDetailsPage(Page):
             Parent widget for the snapshot details page.
         client : Client
             Client object for interacting with the server.
-        init_snapshot : Snapshot
+        snapshot : Snapshot
             Snapshot object to be displayed in the details page.
         """
         super().__init__(parent)
         self.client = client
-        self.snapshot = init_snapshot
+        self.snapshot = snapshot
 
         self.init_ui()
+        if snapshot is not None:
+            self.set_snapshot(snapshot)
 
     def init_ui(self) -> None:
         """Initialize the UI for the snapshot details page."""
@@ -55,7 +64,6 @@ class SnapshotDetailsPage(Page):
         spacer_label1.setStyleSheet("font: bold 18px")
         header_layout.addWidget(spacer_label1)
         self.snapshot_title_label = QtWidgets.QLabel()
-        self.snapshot_title_label.setText(self.snapshot.title)
         header_layout.addWidget(self.snapshot_title_label)
         spacer_label2 = QtWidgets.QLabel()
         spacer_label2.setText("|")
@@ -65,8 +73,6 @@ class SnapshotDetailsPage(Page):
         self.snapshot_time_label.setSizePolicy(
             QtWidgets.QSizePolicy.Expanding,
             QtWidgets.QSizePolicy.Preferred,)
-        ts_str = self.snapshot.creation_time.strftime("%Y-%m-%d %H:%M:%S")
-        self.snapshot_time_label.setText(ts_str)
         header_layout.addWidget(self.snapshot_time_label)
         snapshot_details_layout.addLayout(header_layout)
 
@@ -84,17 +90,17 @@ class SnapshotDetailsPage(Page):
         self.restore_button.clicked.connect(self.show_restore_dialog)
         interactions_layout.addWidget(self.restore_button)
 
-        self.comparison_dialog = SnapshotComparisonDialog(self, self.client, self.snapshot)
+        self.comparison_dialog = SnapshotComparisonDialog(self, self.client)
         self.comparison_dialog.finished.connect(self.comparison_selected)
-        self.comparison_dialog.set_snapshot(self.snapshot)
         self.compare_button = QtWidgets.QPushButton(qta.icon("ph.plus"), "Compare", self)
         self.compare_button.clicked.connect(self.open_comparison_selection)
         interactions_layout.addWidget(self.compare_button)
         snapshot_details_layout.addLayout(interactions_layout)
 
         # Create a snapshot details model, populated with first snapshot for initialization
-        self.snapshot_details_model = PVTableModel(self.snapshot.uuid, self.client)
-        self.pv_table_models[self.snapshot.uuid] = self.snapshot_details_model
+        self.snapshot_details_model = PVTableModel(self.client, snapshot=self.snapshot)
+        if self.snapshot:
+            self.pv_table_models[self.snapshot.uuid] = self.snapshot_details_model
 
         self.snapshot_details_table = SquirrelTableView()
         proxy_model = QtCore.QSortFilterProxyModel()
@@ -127,7 +133,7 @@ class SnapshotDetailsPage(Page):
         if self.snapshot.uuid in self.pv_table_models:
             self.snapshot_details_model = self.pv_table_models[self.snapshot.uuid]
         else:
-            self.snapshot_details_model = PVTableModel(self.snapshot, self.client)
+            self.snapshot_details_model = PVTableModel(self.client, self.snapshot)
             self.pv_table_models[self.snapshot.uuid] = self.snapshot_details_model
         self.snapshot_details_table.model().setSourceModel(self.snapshot_details_model)
 
@@ -193,7 +199,12 @@ class SnapshotDetailsPage(Page):
 class SnapshotComparisonDialog(QtWidgets.QDialog):
     """Dialog for selecting a comparison snapshot."""
 
-    def __init__(self, parent: QtWidgets.QWidget, client: Client, snapshot: Snapshot):
+    def __init__(
+        self,
+        parent: QtWidgets.QWidget,
+        client: Client,
+        snapshot: Optional[Snapshot] = None,
+    ):
         """Initialize the snapshot comparison dialog.
 
         Parameters
@@ -205,10 +216,11 @@ class SnapshotComparisonDialog(QtWidgets.QDialog):
         """
         super().__init__(parent)
         self.client = client
-        self.snapshot = None
+        self.snapshot = snapshot
 
         self.init_ui()
-        self.set_snapshot(snapshot)
+        if snapshot is not None:
+            self.set_snapshot(snapshot)
 
     def init_ui(self) -> None:
         self.setWindowTitle("Select Comparison Snapshot")
@@ -273,9 +285,11 @@ class SnapshotComparisonDialog(QtWidgets.QDialog):
 class ExcludeCurrentSnapshotProxyModel(QtCore.QSortFilterProxyModel):
     """A proxy model that excludes the current snapshot from the source model."""
 
-    def __init__(self, parent, snapshot: Snapshot):
+    def __init__(self, parent, snapshot: Optional[Snapshot] = None):
         super().__init__(parent)
         self.snapshot = snapshot
+        if snapshot is not None:
+            self.set_snapshot(snapshot)
 
     def filterAcceptsRow(self, source_row: int, source_parent: QtCore.QModelIndex) -> bool:
         source_index = self.sourceModel().index(source_row, 0, source_parent)
