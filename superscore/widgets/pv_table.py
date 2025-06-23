@@ -1,5 +1,5 @@
 from enum import Enum, auto
-from typing import Iterable, Union
+from typing import Iterable, Optional, Union
 from uuid import UUID
 
 from qtpy import QtCore, QtGui
@@ -45,9 +45,18 @@ class PVTableModel(LivePVTableModel):
     for selecting rows.
     """
 
-    def __init__(self, snapshot: Union[UUID, Snapshot], client, parent=None):
+    def __init__(
+        self,
+        client,
+        snapshot: Optional[Union[UUID, Snapshot]],
+        parent=None,
+    ):
         super().__init__(client=client, entries=[], parent=parent)
-        self.set_snapshot(snapshot)
+        if snapshot:
+            self.set_snapshot(snapshot)
+        else:
+            self._data = []
+            self._checked = set()
 
     def rowCount(self, parent=None):
         return len(self._data)
