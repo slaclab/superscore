@@ -158,7 +158,7 @@ class FlowLayout(QtWidgets.QLayout):
         """
         size = QtCore.QSize()
         for item in self.itemList:
-            size = size.expandedTo(item.minimumSize())
+            size = size.expandedTo(item.widget().minimumSize())
         margins = self.contentsMargins()
         size += QtCore.QSize(margins.left() + margins.right(),
                              margins.top() + margins.bottom())
