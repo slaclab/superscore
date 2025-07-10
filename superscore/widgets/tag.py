@@ -58,6 +58,7 @@ class TagChip(QtWidgets.QFrame):
         self.paint(painter)
 
     def paint(self, painter):
+        painter.save()
         painter.setRenderHint(QtGui.QPainter.Antialiasing, True)
 
         tag_strings = {self.choices[tag] for tag in self.tags}
@@ -101,6 +102,9 @@ class TagChip(QtWidgets.QFrame):
         tags_string = ", ".join(sorted(tag_strings))
         tags_rect = QtCore.QRectF(0, 0, painter.font().pointSize() * len(tags_string), name_rect.height())
         painter.drawText(tags_rect, tags_string)
+
+        painter.restore()
+        painter.translate(rect.topRight())
 
     def sizeHint(self):
         metrics = QtGui.QFontMetricsF(QtGui.QFont())
@@ -298,11 +302,12 @@ class TagsWidget(QtWidgets.QWidget):
         return None
 
     def paint(self, painter):
+        painter.translate(self.layout().itemAt(0).widget().pos())
         for i in range(self.layout().count()):
             chip = self.layout().itemAt(i).widget()
-            painter.translate(chip.pos())
-            chip.paint(painter)
-            painter.resetTransform()
+            if chip.isEnabled() or len(chip.tags) > 0:
+                chip.paint(painter)
+        painter.resetTransform()
 
 
 class TagDelegate(QtWidgets.QStyledItemDelegate):
