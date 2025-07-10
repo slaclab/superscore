@@ -17,6 +17,7 @@ def linac_data() -> Root:
         uuid="5544c58f-88b6-40aa-9076-f180a44908f5",
         pv_name="LASR:GUNB:TEST1",
         description="First LASR pv in GUNB",
+        tags={0: {0, 1}, 2: {2}, 3: {0, 1}},
     )
 
     now = lasr_gunb_pv1.creation_time
@@ -26,6 +27,7 @@ def linac_data() -> Root:
         pv_name="LASR:GUNB:TEST2",
         description="Second LASR pv in GUNB",
         creation_time=now,
+        tags={0: {0, 1}, 2: {2}, 3: {0, 1}},
     )
 
     mgnt_gunb_pv = Parameter(
@@ -33,6 +35,7 @@ def linac_data() -> Root:
         pv_name="MGNT:GUNB:TEST0",
         description="Only MGNT pv in GUNB",
         creation_time=now,
+        tags={0: {0, 1}, 2: {0}, 3: {0, 1}},
     )
 
     vac_gunb_pv1 = Parameter(
@@ -40,6 +43,7 @@ def linac_data() -> Root:
         pv_name="VAC:GUNB:TEST1",
         description="First VAC pv in GUNB",
         creation_time=now,
+        tags={0: {0, 1}, 2: {3}, 3: {0, 1}},
     )
 
     vac_gunb_pv2 = Parameter(
@@ -47,6 +51,7 @@ def linac_data() -> Root:
         pv_name="VAC:GUNB:TEST2",
         description="Second VAC pv in GUNB",
         creation_time=now,
+        tags={0: {0, 1}, 2: {3}, 3: {0, 1}},
     )
 
     vac_l0b_pv = Parameter(
@@ -54,6 +59,7 @@ def linac_data() -> Root:
         pv_name="VAC:L0B:TEST0",
         description="Only VAC pv in L0B",
         creation_time=now,
+        tags={2: {3}, 3: {0, 1}},
     )
 
     vac_bsy_pv = Parameter(
@@ -61,6 +67,7 @@ def linac_data() -> Root:
         pv_name="VAC:BSY:TEST0",
         description="Only VAC pv in BSY",
         creation_time=now,
+        tags={0: {1}, 2: {3}, 3: {0, 1}},
     )
 
     vac_li10_pv = Parameter(
@@ -68,6 +75,7 @@ def linac_data() -> Root:
         pv_name="VAC:LI10:TEST0",
         description="Only VAC pv in LI10",
         creation_time=now,
+        tags={2: {3}, 3: {0, 1}},
     )
 
     lasr_in10_pv = Parameter(
@@ -75,6 +83,7 @@ def linac_data() -> Root:
         pv_name="LASR:IN10:TEST0",
         description="Only laser pv in IN10",
         creation_time=now,
+        tags={2: {2}, 3: {0, 1}},
     )
 
     lasr_in20_pv = Parameter(
@@ -82,6 +91,7 @@ def linac_data() -> Root:
         pv_name="LASR:IN20:TEST0",
         description="Only laser pv in IN20",
         creation_time=now,
+        tags={0: {1}, 2: {2}, 3: {0, 1}},
     )
 
     vac_li21_pv = Parameter(
@@ -89,6 +99,7 @@ def linac_data() -> Root:
         pv_name="VAC:LI21:TEST0",
         description="Only VAC pv in LI21",
         creation_time=now,
+        tags={0: {1}, 2: {3}, 3: {0, 1}},
     )
 
     lasr_gunb_value1 = Setpoint(
@@ -98,6 +109,7 @@ def linac_data() -> Root:
         data="Off",
         status=Status.NO_ALARM,
         severity=Severity.NO_ALARM,
+        tags={0: {0, 1}, 2: {2}, 3: {0, 1}},
     )
 
     now = lasr_gunb_value1.creation_time
@@ -110,6 +122,7 @@ def linac_data() -> Root:
         data=5,
         status=Status.NO_ALARM,
         severity=Severity.NO_ALARM,
+        tags={0: {0, 1}, 2: {2}, 3: {0, 1}},
     )
 
     mgnt_gunb_value = Setpoint(
@@ -120,6 +133,7 @@ def linac_data() -> Root:
         data=True,
         status=Status.NO_ALARM,
         severity=Severity.NO_ALARM,
+        tags={0: {0, 1}, 2: {0}, 3: {0, 1}},
     )
 
     vac_gunb_value1 = Setpoint(
@@ -130,6 +144,7 @@ def linac_data() -> Root:
         data="Ion Pump",
         status=Status.NO_ALARM,
         severity=Severity.NO_ALARM,
+        tags={0: {0, 1}, 2: {3}, 3: {0, 1}},
     )
 
     vac_gunb_value2 = Setpoint(
@@ -140,6 +155,7 @@ def linac_data() -> Root:
         data=False,
         status=Status.NO_ALARM,
         severity=Severity.NO_ALARM,
+        tags={0: {0, 1}, 2: {3}, 3: {0, 1}},
     )
 
     vac_l0b_value = Setpoint(
@@ -150,6 +166,7 @@ def linac_data() -> Root:
         data=-10,
         status=Status.NO_ALARM,
         severity=Severity.NO_ALARM,
+        tags={2: {3}, 3: {0, 1}},
     )
 
     vac_bsy_value = Setpoint(
@@ -160,6 +177,7 @@ def linac_data() -> Root:
         data="",
         status=Status.NO_ALARM,
         severity=Severity.NO_ALARM,
+        tags={0: {1}, 2: {3}, 3: {0, 1}},
     )
 
     vac_li10_value = Setpoint(
@@ -170,6 +188,7 @@ def linac_data() -> Root:
         data=.25,
         status=Status.NO_ALARM,
         severity=Severity.NO_ALARM,
+        tags={2: {3}, 3: {0, 1}},
     )
 
     lasr_in10_value = Setpoint(
@@ -180,6 +199,7 @@ def linac_data() -> Root:
         data=645.26,
         status=Status.NO_ALARM,
         severity=Severity.NO_ALARM,
+        tags={2: {2}, 3: {0, 1}},
     )
 
     lasr_in20_value = Setpoint(
@@ -190,6 +210,7 @@ def linac_data() -> Root:
         data=0,
         status=Status.NO_ALARM,
         severity=Severity.NO_ALARM,
+        tags={0: {1}, 2: {2}, 3: {0, 1}},
     )
 
     vac_li21_readback = Readback(
@@ -200,6 +221,7 @@ def linac_data() -> Root:
         data=0.0,
         status=Status.NO_ALARM,
         severity=Severity.NO_ALARM,
+        tags={0: {1}, 2: {2}, 3: {0, 1}},
     )
 
     vac_li21_setpoint = Setpoint(
@@ -211,6 +233,7 @@ def linac_data() -> Root:
         status=Status.NO_ALARM,
         severity=Severity.NO_ALARM,
         readback=vac_li21_readback,
+        tags={0: {1}, 2: {2}, 3: {0, 1}},
     )
 
     all_snapshot = Snapshot(
@@ -235,7 +258,35 @@ def linac_data() -> Root:
 
     tags = {
         0: [
-            "Dest",
+            "Region",
+            "Which region the device is in",
+            {
+                0: "GUN to TD11",
+                1: "Cu Linac",
+            }
+        ],
+        1: [
+            "Area",
+            "Location of the device",
+            {
+                0: "LI21",
+                1: "LI22",
+                2: "LI23",
+            }
+        ],
+        2: [
+            "Subsystem",
+            "Which subsytem the device is a part of",
+            {
+                0: "Magnets",
+                1: "Network",
+                2: "Laser",
+                3: "Vacuum",
+                4: "BPM",
+            }
+        ],
+        3: [
+            "Destination",
             "Which endpoint the beam is directed towards",
             {
                 0: "SXR",
