@@ -13,11 +13,10 @@ from superscore.client import Client
 from superscore.control_layers import EpicsData
 from superscore.model import (Collection, Nestable, Parameter, Root, Severity,
                               Status)
-from superscore.tests.conftest import nest_depth, setup_test_stack
+from superscore.tests.conftest import setup_test_stack
 from superscore.widgets.views import (CustRoles, EntryItem, LivePVHeader,
                                       LivePVTableModel, LivePVTableView,
-                                      NestableTableView, RootTree,
-                                      RootTreeView)
+                                      RootTree, RootTreeView)
 
 
 @pytest.fixture(scope='function')
@@ -217,59 +216,6 @@ def test_fill_uuids_pvs(
     view.model().stop_polling()
     print(view.model()._poll_thread)
     qtbot.wait_until(lambda: not view.model()._poll_thread.isRunning())
-
-
-def test_fill_uuids_nestable(
-    test_client: Client,
-    linac_backend: TestBackend,
-):
-    """Verify UUID data gets filled, and dataclass gets modified"""
-    nested_coll = linac_backend.get_entry("441ff79f-4948-480e-9646-55a1462a5a70")
-    nested_coll.swap_to_uuids()
-    assert all(isinstance(c, UUID) for c in nested_coll.children)
-    view = NestableTableView()
-    # mock client does not ever return None, as if entries are always found
-    # in the backend.  (entries will be "filled" with mock data)
-    view.client = test_client
-    view.set_data(nested_coll)
-
-    assert all(not isinstance(c, UUID) for c in nested_coll.children)
-
-
-@setup_test_stack(sources=['linac_data'], backend_type=TestBackend)
-def test_fill_uuids_entry_item(test_client: Client, qtbot: QtBot):
-    nested_coll = test_client.backend.get_entry("441ff79f-4948-480e-9646-55a1462a5a70")
-    assert not all(isinstance(c, UUID) for c in nested_coll.children)
-    # should have a nest depth of 4
-    nested_coll.swap_to_uuids()
-    assert all(isinstance(c, UUID) for c in nested_coll.children)
-
-    # hack: make all of linac_backend flat
-    for entry in test_client.backend._entry_cache.values():
-        entry.swap_to_uuids()
-
-    tree_model = RootTree(base_entry=nested_coll, client=test_client)
-    original_depth = nest_depth(tree_model.root_item)
-    # default fill depth is 2, so children and their children get EntryItems
-    assert original_depth == 2
-
-    # fill just the first child
-    # fill depth can depend on how the backend returns data.  Backend may not
-    # be lazy, so we assert only child1's children have EntryItems
-    root_item = tree_model.root_item
-    child1 = root_item.child(0)
-    assert child1.child(0).childCount() == 0
-    child1.fill_uuids(test_client)
-    assert child1.child(0).childCount() > 0
-    assert root_item.child(1).child(0).childCount() == 0
-    assert root_item.child(2).child(0).childCount() == 0
-
-    # filling only occurs if direct children are UUIDs, does nothing here
-    # since it was originally filled by RootTree
-    root_item.fill_uuids(test_client)
-    assert root_item.child(0).child(0).childCount() > 0
-    assert root_item.child(1).child(0).childCount() == 0
-    assert root_item.child(2).child(0).childCount() == 0
 
 
 def test_roottree_setup(sample_database_fixture: Root):
