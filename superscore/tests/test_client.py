@@ -240,12 +240,6 @@ def test_search_entries_by_ancestor(test_client: Client):
         ("ancestor", "eq", UUID("06282731-33ea-4270-ba14-098872e627dc")),  # top-level snapshot
     ))
     assert len(entries) == 1
-    entries = tuple(test_client.search(
-        ("entry_type", "eq", Setpoint),
-        ("pv_name", "eq", "LASR:GUNB:TEST1"),
-        ("ancestor", "eq", UUID("2f709b4b-79da-4a8b-8693-eed2c389cb3a")),  # direct parent
-    ))
-    assert len(entries) == 1
 
 
 @setup_test_stack(
@@ -253,15 +247,15 @@ def test_search_entries_by_ancestor(test_client: Client):
     backend_type=FilestoreBackend
 )
 def test_search_caching(test_client: Client):
-    entry = test_client.backend.get_entry(UUID("2f709b4b-79da-4a8b-8693-eed2c389cb3a"))
+    entry = test_client.backend.get_entry(UUID("06282731-33ea-4270-ba14-098872e627dc"))
     result = test_client.search(
-        ("ancestor", "eq", UUID("2f709b4b-79da-4a8b-8693-eed2c389cb3a")),
+        ("ancestor", "eq", UUID("06282731-33ea-4270-ba14-098872e627dc")),
     )
-    assert len(tuple(result)) == 3
+    assert len(tuple(result)) == 13
     entry.children = []
     test_client.backend.update_entry(entry)
     result = test_client.search(
-        ("ancestor", "eq", UUID("2f709b4b-79da-4a8b-8693-eed2c389cb3a")),
+        ("ancestor", "eq", UUID("06282731-33ea-4270-ba14-098872e627dc")),
     )
     assert len(tuple(result)) == 1  # update is picked up in new search
 

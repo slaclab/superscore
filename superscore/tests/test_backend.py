@@ -14,9 +14,9 @@ from superscore.tests.conftest import setup_test_stack
 
 class TestTestBackend:
     def test_retrieve(self, linac_backend):
-        assert linac_backend.get_entry("441ff79f-4948-480e-9646-55a1462a5a70") is not None  # top-level Collection
-        assert linac_backend.get_entry("be3d4655-7813-4974-bb10-19e4787f8a8e") is not None  # Inner Collection
-        assert linac_backend.get_entry("2c83a9be-bec6-4436-8233-79df300af670") is not None  # Parameter
+        assert linac_backend.get_entry("5544c58f-88b6-40aa-9076-f180a44908f5") is not None  # Parameter
+        assert linac_backend.get_entry("06282731-33ea-4270-ba14-098872e627dc") is not None  # Snapshot
+        assert linac_backend.get_entry("4bffe9a5-f198-41d8-90ab-870d1b5a325b") is not None  # Setpoint
         with pytest.raises(EntryNotFoundError):
             linac_backend.get_entry("d3589b21-2f77-462d-9280-bb4d4e48d93b")  # Doesn't exist
 
@@ -30,23 +30,23 @@ class TestTestBackend:
         assert linac_backend.get_entry("8913b7af-830d-4e32-bebe-b34a4616ce79") is not None
 
     def test_update(self, linac_backend):
-        modified_entry = Collection(uuid="d5bade05-d992-4e44-87d8-0db2937209bf", description="This is the new description")
+        modified_entry = Parameter(uuid="030786df-153b-4d29-bc1f-66deeb116724", description="This is the new description")
         linac_backend.update_entry(modified_entry)
         assert linac_backend.get_entry(modified_entry.uuid) == modified_entry
 
-        missing_entry = Collection(uuid="d3589b21-2f77-462d-9280-bb4d4e48d93b")
+        missing_entry = Parameter(uuid="d3589b21-2f77-462d-9280-bb4d4e48d93b")
         with pytest.raises(EntryNotFoundError):
             linac_backend.update_entry(missing_entry)
 
     def test_delete(self, linac_backend):
-        entry = linac_backend.get_entry("2506d87a-5980-4470-b29a-63eea183f53d")
+        entry = linac_backend.get_entry("502d9fc3-455a-47ea-8c48-e1a26d4d3350")
         linac_backend.delete_entry(entry)
         with pytest.raises(EntryNotFoundError):
-            linac_backend.get_entry("2506d87a-5980-4470-b29a-63eea183f53d")
+            linac_backend.get_entry("502d9fc3-455a-47ea-8c48-e1a26d4d3350")
 
-        entry = linac_backend.get_entry("aa11f29a-3e7e-4647-bfc9-133257647fb7")
+        entry = linac_backend.get_entry("930b137f-5ae2-470e-8b82-c4b4eb7e639e")
         # need new instance because editing entry would automatically sync to the backend
-        unsynced = Collection(**entry.__dict__)
+        unsynced = Parameter(**entry.__dict__)
         unsynced.description = "I haven't been synced with the backend"
         with pytest.raises(BackendError):
             linac_backend.delete_entry(unsynced)
@@ -218,15 +218,15 @@ def test_update_entry(test_backend: _Backend):
     sources=["linac_data"], backend_type=[FilestoreBackend, DirectoryBackend]
 )
 def test_gather_reachable(test_backend: _Backend):
-    # top-level snapshot
+    # snapshot
     reachable = test_backend._gather_reachable(UUID("06282731-33ea-4270-ba14-098872e627dc"))
-    assert len(reachable) == 32
+    assert len(reachable) == 13
     assert UUID("927ef6cb-e45f-4175-aa5f-6c6eec1f3ae4") in reachable
 
-    # direct parent snapshot; works with UUID or Entry
-    entry = test_backend.get_entry(UUID("2f709b4b-79da-4a8b-8693-eed2c389cb3a"))
+    # works with UUID or Entry
+    entry = test_backend.get_entry(UUID("06282731-33ea-4270-ba14-098872e627dc"))
     reachable = test_backend._gather_reachable(entry)
-    assert len(reachable) == 3
+    assert len(reachable) == 13
     assert UUID("927ef6cb-e45f-4175-aa5f-6c6eec1f3ae4") in reachable
 
 
@@ -236,10 +236,10 @@ def test_gather_reachable(test_backend: _Backend):
 def test_tags(test_backend: _Backend):
     tag_groups = test_backend.get_tags()
     dest_tags = {0: "SXR", 1: "HXR"}
-    assert tag_groups[0][0] == 'Dest'
-    assert tag_groups[0][2] == dest_tags
+    assert tag_groups[3][0] == 'Destination'
+    assert tag_groups[3][2] == dest_tags
 
     new_tags = {0: "SXR-2", 1: "HXR", 2: "BSYD"}
-    tag_groups[0][2] = new_tags
+    tag_groups[3][2] = new_tags
     test_backend.set_tags(tag_groups)
-    assert test_backend.get_tags()[0][2] == new_tags
+    assert test_backend.get_tags()[3][2] == new_tags

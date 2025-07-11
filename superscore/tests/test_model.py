@@ -150,8 +150,5 @@ class TestEntryValidation:
 
     @staticmethod
     def test_fixture_validation(linac_backend):
-        linac_model = linac_backend.get_entry("441ff79f-4948-480e-9646-55a1462a5a70")
-        assert linac_model.validate()
-
         linac_snapshot = linac_backend.get_entry("06282731-33ea-4270-ba14-098872e627dc")
         assert linac_snapshot.validate()
