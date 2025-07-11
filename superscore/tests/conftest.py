@@ -100,7 +100,7 @@ class MockTaskStatus:
 
 @pytest.fixture
 def linac_ioc(linac_backend):
-    _, snapshot = linac_data().entries
+    snapshot = linac_data().entries[0]
     client = Client(backend=linac_backend)
     with IOCFactory.from_entries(snapshot.children, client)(prefix="SCORETEST:") as ioc:
         yield ioc
