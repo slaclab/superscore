@@ -1,7 +1,7 @@
 from typing import Any, Optional
 
 import qtawesome as qta
-from qtpy import QtCore, QtWidgets
+from qtpy import QtCore, QtGui, QtWidgets
 
 import superscore.color
 from superscore.type_hints import TagDef, TagSet
@@ -42,120 +42,100 @@ class TagChip(QtWidgets.QFrame):
         self.tag_name = tag_name
         self.choices = choices
         self.tags = set()
-        self.setProperty("empty", True)
         self.setToolTip(desc)
-        self.setStyleSheet(
-            "TagChip {"
-            "border-width: 2px;"
-            f"border-color: {superscore.color.GREY};"
-            "border-radius: 1.9ex;"
-            "}\n"
-            "TagChip:disabled {"
-            "border-radius: 1.7ex;"
-            "}\n"
-            "TagChip[empty=\"false\"] {"
-            "border-style: solid;"
-            "}\n"
-            "TagChip[empty=\"true\"] {"
-            "border-style: dashed;"
-            "}\n"
-        )
-
-        self.group_label = QtWidgets.QLabel()
-        self.group_label.setStyleSheet(
-            "QLabel:disabled {"
-            f"color: {superscore.color.GREY};"
-            "}"
-        )
-        self.spacer_label = QtWidgets.QLabel("|")
-        self.tags_label = QtWidgets.QLabel()
-        self.tags_label.setStyleSheet(
-            f"color: {superscore.color.LIGHT_BLUE};"
-        )
-
-        self.setLayout(QtWidgets.QHBoxLayout())
-        self.layout().setSpacing(3)
-        self.layout().addWidget(self.group_label)
-        self.layout().addWidget(self.spacer_label)
-        self.layout().addWidget(self.tags_label)
 
         self.editor = TagEditor(self.choices, self.tags, parent=self)
         self.editor.tagsChanged.connect(self.set_tags)
         self.editor.hide()
 
-        self.clear_button = QtWidgets.QToolButton()
-        self.clear_button.setStyleSheet(
-            "QToolButton {"
-            "border-radius: 1ex;"
-            "}"
-        )
-        clear_icon = qta.icon("ph.x-circle-fill", color=superscore.color.GREY, scale_factor=1.1)
-        self.clear_button.setIcon(clear_icon)
-        self.clear_button.clicked.connect(self.clear)
-        self.layout().insertWidget(0, self.clear_button)
-
-        self.add_button = QtWidgets.QToolButton()
-        self.add_button.setStyleSheet(
-            "QToolButton {"
-            "border-radius: 1ex;"
-            "}"
-        )
-        add_icon = qta.icon("ph.plus-circle-fill", color=superscore.color.GREY, scale_factor=1.1)
-        self.add_button.setIcon(add_icon)
-        self.add_button.clicked.connect(self.editor.show)
-        self.layout().insertWidget(0, self.add_button)
+        self.button_rect = QtCore.QRect()
 
         self.setEnabled(enabled)
-        self.redraw()
+        self.adjustSize()
 
-    def setEnabled(self, enabled: bool):
-        super().setEnabled(enabled)
-        self.redraw()
+    def paintEvent(self, event):
+        painter = QtGui.QPainter(self)
+        self.paint(painter)
 
-    def redraw(self) -> None:
-        """Redraw this widget according to its current state"""
-        # set label text
+    def paint(self, painter):
+        painter.save()
+        painter.setRenderHint(QtGui.QPainter.Antialiasing, True)
+
         tag_strings = {self.choices[tag] for tag in self.tags}
-        self.group_label.setText(f"{self.tag_name}")
-        self.tags_label.setText(', '.join(sorted(tag_strings)))
-        if len(self.tags) > 0:
-            self.spacer_label.show()
-        else:
-            self.spacer_label.hide()
 
-        # show correct icon
-        self.clear_button.hide()
-        self.add_button.hide()
+        painter.setBrush(QtCore.Qt.NoBrush)
+        pen = QtGui.QPen()
+        pen.setWidth(2)
+        pen.setStyle(QtCore.Qt.DashLine)
+        pen.setColor(QtGui.QColor(superscore.color.GREY))
+        painter.setPen(pen)
+        rect = self.contentsRect()
+        spacing = rect.height() / 4
+
+        border_rect = self.contentsRect() - QtCore.QMargins(pen.width(), pen.width(), pen.width(), pen.width())
+        painter.drawRoundedRect(border_rect, border_rect.height() / 2, border_rect.height() / 2)
+
+        painter.setPen(QtCore.Qt.NoPen)
+        self.button_rect = QtCore.QRectF((rect.height() / 2) - spacing, (rect.height() / 2) - spacing, spacing * 2, spacing * 2)
+        painter.translate(self.button_rect.left(), self.button_rect.top())
         if self.isEnabled():
-            if len(self.tags) > 0:
-                self.clear_button.show()
+            if len(tag_strings) > 0:
+                icon = qta.icon("ph.x-bold", color=superscore.color.GREY)
             else:
-                self.add_button.show()
-            self.layout().setContentsMargins(5, 2, 5, 2)
+                icon = qta.icon("ph.plus-bold", color=superscore.color.GREY)
+            icon.paint(painter, QtCore.QRectF(0, 0, self.button_rect.width(), self.button_rect.height()).toRect())
+            painter.translate(self.button_rect.width() + (spacing / 2), 0)
         else:
-            self.layout().setContentsMargins(10, 2, 0, 2)
+            painter.translate(spacing, 0)
 
-        # trigger "empty" property styling; cannot update box model
-        self.style().unpolish(self)
-        self.style().polish(self)
-        self.update()
+        painter.setPen(QtCore.Qt.SolidLine)
+        name_rect = QtCore.QRectF(0, 0, painter.font().pointSize() * len(self.tag_name), spacing * 2)
+        painter.drawText(name_rect, self.tag_name)
+        painter.translate(name_rect.right(), 0)
+
+        if len(tag_strings) > 0:
+            painter.drawLine(QtCore.QPointF(-painter.pen().width(), name_rect.top()), QtCore.QPointF(-painter.pen().width(), name_rect.bottom()))
+            painter.translate(spacing, 0)
+
+        pen.setColor(QtGui.QColor(superscore.color.LIGHT_BLUE))
+        painter.setPen(pen)
+        tags_string = ", ".join(sorted(tag_strings))
+        tags_rect = QtCore.QRectF(0, 0, painter.font().pointSize() * len(tags_string), name_rect.height())
+        painter.drawText(tags_rect, tags_string)
+
+        painter.restore()
+        painter.translate(rect.topRight())
+
+    def sizeHint(self):
+        metrics = QtGui.QFontMetricsF(QtGui.QFont())
+        tag_strings = {self.choices[tag] for tag in self.tags}
+        text = self.tag_name + ", ".join(sorted(tag_strings))
+        text_size = metrics.size(QtCore.Qt.TextSingleLine, text)
+        height = text_size.height() * 2
+        spacing = height / 4
+        spaces = 7 if len(self.tags) > 0 else 4
+        spaces += int(self.isEnabled())
+        return QtCore.QSizeF(text_size.width() + (spaces * spacing), height).toSize()
+
+    def minimumSize(self):
+        return self.sizeHint()
 
     def set_tags(self, tags: set[int]) -> None:
         """Set this widget's active tags and redraw."""
         self.tags = tags
-        self.setProperty("empty", len(self.tags) == 0)
-        self.redraw()
+        self.updateGeometry()
         self.tagsChanged.emit(self.tags)
 
     def clear(self) -> None:
         """Clear this widget's active tags."""
         self.tags = set()
         self.editor.choice_list.clearSelection()
-        self.redraw()
 
     def mouseReleaseEvent(self, event):
-        self.editor.show()
-        super().mouseReleaseEvent(event)
+        if len(self.tags) > 0 and self.button_rect.contains(event.pos()):
+            self.clear()
+        else:
+            self.editor.show()
 
 
 class TagEditor(QtWidgets.QWidget):
@@ -321,11 +301,29 @@ class TagsWidget(QtWidgets.QWidget):
                 return chip
         return None
 
-    def setEnabled(self, enabled: bool = False):
-        super().setEnabled(enabled)
+    def paint(self, painter):
+        painter.translate(self.layout().itemAt(0).widget().pos())
         for i in range(self.layout().count()):
             chip = self.layout().itemAt(i).widget()
-            if not enabled and len(chip.tags) == 0:
-                chip.hide()
-            else:
-                chip.show()
+            if chip.isEnabled() or len(chip.tags) > 0:
+                chip.paint(painter)
+        painter.resetTransform()
+
+
+class TagDelegate(QtWidgets.QStyledItemDelegate):
+    def __init__(self, tag_def, parent=None):
+        super().__init__(parent)
+        self.tag_def = tag_def
+
+    def paint(self, painter, option, index):
+        tag_widget = TagsWidget(tag_groups=self.tag_def, enabled=False)
+        tag_widget.set_tags(index.data())
+        tag_widget.layout().setGeometry(option.rect)
+        tag_widget.paint(painter)
+
+    def sizeHint(self, option, index):
+        tag_widget = TagsWidget(tag_groups=self.tag_def, enabled=False)
+        tag_widget.set_tags(index.data())
+        width = option.rect.width()
+        height = tag_widget.heightForWidth(width)
+        return QtCore.QSize(width, height)

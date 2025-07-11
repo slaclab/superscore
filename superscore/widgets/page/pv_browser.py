@@ -3,10 +3,11 @@ from qtpy import QtCore, QtWidgets
 
 from superscore.client import Client
 from superscore.widgets.page.page import Page
-from superscore.widgets.pv_browser_table import (PVBrowserFilterProxyModel,
+from superscore.widgets.pv_browser_table import (PV_BROWSER_HEADER,
+                                                 PVBrowserFilterProxyModel,
                                                  PVBrowserTableModel)
 from superscore.widgets.squirrel_table_view import SquirrelTableView
-from superscore.widgets.tag import TagsWidget
+from superscore.widgets.tag import TagDelegate, TagsWidget
 
 
 class PVBrowserPage(Page):
@@ -47,9 +48,11 @@ class PVBrowserPage(Page):
 
         self.pv_browser_table = SquirrelTableView(self)
         self.pv_browser_table.setModel(self.pv_browser_filter)
+        self.pv_browser_table.setItemDelegateForColumn(PV_BROWSER_HEADER.TAGS.value, TagDelegate(self.client.backend.get_tags()))
         header_view = self.pv_browser_table.horizontalHeader()
         header_view.setSectionResizeMode(header_view.Fixed)
         header_view.setStretchLastSection(True)
+        header_view.sectionResized.connect(self.pv_browser_table.resizeRowsToContents)
         pv_browser_layout.addWidget(self.pv_browser_table)
         self.pv_browser_table.resizeColumnsToContents()
 

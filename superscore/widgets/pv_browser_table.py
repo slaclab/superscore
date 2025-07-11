@@ -81,7 +81,7 @@ class PVBrowserTableModel(QtCore.QAbstractTableModel):
             elif column == PV_BROWSER_HEADER.READBACK:
                 return entry.readback.pv_name if entry.readback else NO_DATA
             elif column == PV_BROWSER_HEADER.TAGS:
-                return str(entry.tags) if entry.tags else NO_DATA
+                return entry.tags if entry.tags else {}
         elif role == QtCore.Qt.UserRole:
             # Return the full entry object for further processing
             entry = self._data[index.row()]
