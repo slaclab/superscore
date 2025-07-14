@@ -77,3 +77,22 @@ class SnapshotTableModel(QtCore.QAbstractTableModel):
         if not (index and index.isValid()):
             return None
         return self._data[index.row()]
+
+
+class SnapshotFilterModel(QtCore.QSortFilterProxyModel):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.setFilterKeyColumn(1)
+        self.since = QtCore.QDate.currentDate().addYears(-1)
+        self.until = QtCore.QDate.currentDate()
+
+    def filterAcceptsRow(self, row: int, parent: QtCore.QModelIndex) -> bool:
+        datetime = self.sourceModel()._data[row].creation_time
+        date = QtCore.QDate(datetime.year, datetime.month, datetime.day)
+        is_date_in_range = self.since <= date and date <= self.until
+        return is_date_in_range and super().filterAcceptsRow(row, parent)
+
+    def setDateRange(self, since: QtCore.QDate, until: QtCore.QDate):
+        self.since = since
+        self.until = until
+        self.invalidateFilter()

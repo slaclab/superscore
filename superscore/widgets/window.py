@@ -18,6 +18,7 @@ from superscore.control_layers._base_shim import EpicsData
 from superscore.model import Parameter, Readback, Setpoint, Snapshot
 from superscore.widgets.configure_window import TagGroupsWindow
 from superscore.widgets.core import NameDescTagsWidget, QtSingleton
+from superscore.widgets.date_range import DateRangeWidget
 from superscore.widgets.page.page import Page
 from superscore.widgets.page.pv_browser import PVBrowserPage
 from superscore.widgets.page.snapshot_comparison import SnapshotComparisonPage
@@ -25,7 +26,8 @@ from superscore.widgets.page.snapshot_details import SnapshotDetailsPage
 from superscore.widgets.pv_browser_table import PVBrowserFilterProxyModel
 from superscore.widgets.pv_details_components import PVDetails, PVDetailsPopup
 from superscore.widgets.pv_table import PVTableModel
-from superscore.widgets.snapshot_table import SnapshotTableModel
+from superscore.widgets.snapshot_table import (SnapshotFilterModel,
+                                               SnapshotTableModel)
 from superscore.widgets.squirrel_table_view import SquirrelTableView
 from superscore.widgets.views import DiffDispatcher
 
@@ -106,8 +108,34 @@ class Window(QtWidgets.QMainWindow, metaclass=QtSingleton):
         view_snapshot_layout.setContentsMargins(0, 11, 0, 0)
         view_snapshot_page.setLayout(view_snapshot_layout)
 
+        filters_layout = QtWidgets.QHBoxLayout()
+
+        date_range = DateRangeWidget()
+        date_range.setRange(
+            QtCore.QDate.currentDate().addYears(-1),
+            QtCore.QDate.currentDate(),
+        )
+        filters_layout.addWidget(date_range)
+
+        search_bar = QtWidgets.QLineEdit()
+        search_bar.setClearButtonEnabled(True)
+        search_bar.addAction(
+            qta.icon("fa5s.search"),
+            QtWidgets.QLineEdit.LeadingPosition,
+        )
+        filters_layout.addWidget(search_bar)
+
+        spacer = QtWidgets.QSpacerItem(1, 1, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
+        filters_layout.addSpacerItem(spacer)
+
+        view_snapshot_layout.addLayout(filters_layout)
+
         self.snapshot_table = SquirrelTableView()
-        self.snapshot_table.setModel(SnapshotTableModel(self.client))
+        snapshot_model = SnapshotTableModel(self.client)
+        proxy_model = SnapshotFilterModel()
+        proxy_model.setFilterCaseSensitivity(False)
+        proxy_model.setSourceModel(snapshot_model)
+        self.snapshot_table.setModel(proxy_model)
         self.snapshot_table.doubleClicked.connect(self.open_snapshot_index)
         self.snapshot_table.setShowGrid(False)
         self.snapshot_table.setStyleSheet(
@@ -122,12 +150,16 @@ class Window(QtWidgets.QMainWindow, metaclass=QtSingleton):
         header_view.setSectionResizeMode(1, header_view.Stretch)
         self.snapshot_table.resizeColumnsToContents()
         view_snapshot_layout.addWidget(self.snapshot_table)
+
+        search_bar.textEdited.connect(proxy_model.setFilterFixedString)
+        date_range.rangeChanged.connect(proxy_model.setDateRange)
+
         return view_snapshot_page
 
     def init_snapshot_details_page(self) -> SnapshotDetailsPage:
         """Initialize the snapshot details page with the first snapshot in the snapshot_model."""
-        temp_index = self.snapshot_table.model().index(0, 0)
-        first_snapshot = self.snapshot_table.model().index_to_snapshot(temp_index)
+        temp_index = self.snapshot_table.model().sourceModel().index(0, 0)
+        first_snapshot = self.snapshot_table.model().sourceModel().index_to_snapshot(temp_index)
         snapshot_details_page = SnapshotDetailsPage(self, self.client, first_snapshot)
         snapshot_details_page.snapshot_details_table.doubleClicked.connect(
             lambda index: self.open_pv_details(index, snapshot_details_page.snapshot_details_table)
@@ -199,7 +231,7 @@ class Window(QtWidgets.QMainWindow, metaclass=QtSingleton):
             return
 
         # Set new_snapshot in the details page
-        new_snapshot = self.snapshot_table.model().index_to_snapshot(index)
+        new_snapshot = self.snapshot_table.model().sourceModel().index_to_snapshot(index)
         self.open_snapshot(new_snapshot)
 
     @QtCore.Slot()
@@ -219,7 +251,7 @@ class Window(QtWidgets.QMainWindow, metaclass=QtSingleton):
         dialog.accepted.connect(partial(self.client.snap, dest=dest_snapshot))
         dialog.accepted.connect(partial(self.client.save, dest_snapshot))
         dialog.accepted.connect(partial(self.open_snapshot, dest_snapshot))
-        dialog.accepted.connect(self.snapshot_table.model().fetch)
+        dialog.accepted.connect(self.snapshot_table.model().sourceModel().fetch)
 
         dialog.open()
         return dest_snapshot

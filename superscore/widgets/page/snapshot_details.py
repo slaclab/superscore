@@ -217,7 +217,7 @@ class SnapshotComparisonDialog(QtWidgets.QDialog):
         self.proxy_model = ExcludeCurrentSnapshotProxyModel(self, self.snapshot)
         try:
             main_window = self.parent().parent()
-            snapshot_table_model = main_window.snapshot_table.model()
+            snapshot_table_model = main_window.snapshot_table.model().sourceModel()
         except AttributeError:
             snapshot_table_model = SnapshotTableModel(self.client)
         finally:
