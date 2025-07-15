@@ -1,7 +1,6 @@
 import logging
 from enum import Enum, auto
-from typing import Any
-
+from typing import Dict, List, Any
 from qtpy import QtCore
 
 from superscore.model import Parameter
@@ -137,3 +136,73 @@ class PVBrowserFilterProxyModel(QtCore.QSortFilterProxyModel):
 
         search_accepts_row = super().filterAcceptsRow(source_row, source_parent)
         return self.is_tag_subset(entry.tags) and search_accepts_row
+
+
+class CSVTableModel(QtCore.QAbstractTableModel):
+    def __init__(self, csv_data: List[Dict[str, Any]], parent=None):
+        super().__init__(parent=parent)
+        self._data = csv_data
+        self._headers = self._build_headers()
+        
+    def _build_headers(self) -> List[str]:
+        """Build headers from the first row of data"""
+        if not self._data:
+            return []
+        
+        headers = ['PV', 'Description']
+        # Add all group column names
+        if self._data[0].get('groups'):
+            headers.extend(sorted(self._data[0]['groups'].keys()))
+        
+        return headers
+    
+    def rowCount(self, parent=QtCore.QModelIndex()) -> int:
+        return len(self._data)
+    
+    def columnCount(self, parent=QtCore.QModelIndex()) -> int:
+        return len(self._headers)
+    
+    def headerData(self, section: int, orientation: QtCore.Qt.Orientation, role: int = QtCore.Qt.DisplayRole):
+        if orientation == QtCore.Qt.Horizontal and role == QtCore.Qt.DisplayRole:
+            if 0 <= section < len(self._headers):
+                return self._headers[section]
+        return None
+    
+    def data(self, index: QtCore.QModelIndex, role: int = QtCore.Qt.DisplayRole):
+        if not index.isValid() or not (0 <= index.row() < len(self._data)):
+            return None
+        
+        row_data = self._data[index.row()]
+        column_name = self._headers[index.column()]
+        
+        if role == QtCore.Qt.DisplayRole:
+            if column_name == 'PV':
+                return row_data.get('PV', '')
+            elif column_name == 'Description':
+                return row_data.get('Description', '')
+            else:
+                # This is a group column
+                group_values = row_data.get('groups', {}).get(column_name, [])
+                return ', '.join(group_values) if group_values else ''
+        
+        elif role == QtCore.Qt.ToolTipRole:
+            if column_name == 'PV':
+                return f"PV: {row_data.get('PV', '')}"
+            elif column_name == 'Description':
+                return f"Description: {row_data.get('Description', '')}"
+            else:
+                # This is a group column
+                group_values = row_data.get('groups', {}).get(column_name, [])
+                if group_values:
+                    return f"{column_name}:\n" + '\n'.join(f"• {val}" for val in group_values)
+                else:
+                    return f"{column_name}: No data"
+        
+        elif role == QtCore.Qt.TextAlignmentRole:
+            return QtCore.Qt.AlignLeft | QtCore.Qt.AlignVCenter
+        
+        elif role == QtCore.Qt.UserRole:
+            # Return the full row data for further processing
+            return row_data
+        
+        return None
