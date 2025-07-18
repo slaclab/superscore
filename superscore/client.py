@@ -1,9 +1,11 @@
 """Client for superscore.  Used for programmatic interactions with superscore"""
 import configparser
 import logging
+import asyncio
 import os
 from pathlib import Path
-from typing import Any, Dict, Generator, Iterable, List, Optional, Union
+from typing import (Any, Callable, Dict, Generator, Iterable, List, Optional,
+                    Union)
 from uuid import UUID
 
 from superscore.backends import get_backend
@@ -251,15 +253,28 @@ class Client:
 
             entry.children = new_children
 
-    def snap(self, dest: Optional[Snapshot] = None) -> Snapshot:
+    def snap(self, dest: Optional[Snapshot] = None,
+             entry_callback: Optional[Callable[[Entry], None]] = None,
+             progress_callback: Optional[Callable[[int], None]] = None
+             ) -> Snapshot:
         """
-        Asyncronously read data for all PVs under ``entry``, and store in a
-        Snapshot.  PVs that can't be read will have an exception as their value.
+        Asyncronously read data for all PVs and store in a Snapshot. If
+        ``dest`` is provided, the Snapshot will be saved to it, otherwise
+        a new Snapshot will be created. PVs that can't be read will have
+        an exception as their value.
 
         Parameters
         ----------
-        entry : Collection
-            the Collection to save
+        dest: Optional[Snapshot]
+            If provided, the Snapshot will be saved to it, otherwise a new
+            Snapshot will be created.
+        entry_callback: Optional[Callable[[Entry], None]]
+            A callback function that will be called for each entry added to the
+            Snapshot. The function should take a single argument, the entry.
+        progress_callback: Optional[Callable[[int], None]]
+            A callback function that will be called with the progress of the
+            Snapshot creation. The function should take a single argument, a int
+            between 0 and 100 representing the progress.
 
         Returns
         -------
@@ -271,6 +286,11 @@ class Client:
         readback_pvs = [pv.readback for pv in pvs if getattr(pv, "readback", None)]
         meta_pvs = self.backend.get_meta_pvs()
         all_pvs = pvs + readback_pvs + meta_pvs
+        if progress_callback:
+            curr_pv_count = 0
+            total_pv_count = len(all_pvs)
+            progress_callback(100 * (curr_pv_count / total_pv_count))
+
         values = self.cl.get([pv.pv_name for pv in all_pvs])
         data = {pv.pv_name: value for pv, value in zip(all_pvs, values)}
 
@@ -308,6 +328,11 @@ class Client:
                     readback=readback,
                 )
             snapshot.children.append(new_entry)
+            if entry_callback:
+                entry_callback(new_entry)
+            if progress_callback:
+                curr_pv_count += 1
+                progress_callback(100 * (curr_pv_count / total_pv_count))
 
         for pv in readback_pvs:
             value = data[pv.pv_name]
@@ -319,6 +344,11 @@ class Client:
                 severity=edata.severity,
             )
             snapshot.children.append(new_entry)
+            if entry_callback:
+                entry_callback(new_entry)
+            if progress_callback:
+                curr_pv_count += 1
+                progress_callback(100 * (curr_pv_count / total_pv_count))
 
         for pv in meta_pvs:
             value = data[pv.pv_name]
@@ -330,8 +360,106 @@ class Client:
                 severity=edata.severity,
             )
             snapshot.meta_pvs.append(new_entry)
+            if entry_callback:
+                entry_callback(new_entry)
+            if progress_callback:
+                curr_pv_count += 1
+                progress_callback(100 * (curr_pv_count / total_pv_count))
 
         return snapshot
+
+    async def snap_async(
+        self,
+        dest: Optional[Snapshot] = None,
+        entry_callback: Optional[Callable[[Entry], None]] = None,
+        progress_callback: Optional[Callable[[tuple], None]] = None
+    ) -> Snapshot:
+        pvs = list(self.search(("entry_type", "eq", Parameter)))
+        readback_pvs = [pv.readback for pv in pvs if getattr(pv, "readback", None)]
+        meta_pvs = self.backend.get_meta_pvs()
+        all_pvs = pvs + readback_pvs + meta_pvs
+        if progress_callback:
+            curr_pv_count = 0
+            total_pv_count = len(all_pvs)
+            progress_callback((curr_pv_count, total_pv_count))
+
+        values = self.cl.get([pv.pv_name for pv in all_pvs])
+        data = {pv.pv_name: value for pv, value in zip(all_pvs, values)}
+
+        snapshot = dest or Snapshot()
+
+        async def pv_chain(pv):
+            value = data[pv.pv_name]
+            if pv.readback is not None:
+                readback_value = data[pv.readback.pv_name]
+                readback_pvs.remove(pv.readback)
+            else:
+                readback_value = None
+            entry = await self.pv_snap_coro(pv, value, readback_value)
+            await self.callback_coro(snapshot, entry, entry_callback, progress_callback)
+        await asyncio.gather(*(pv_chain(pv) for pv in pvs))
+
+        async def special_pv_chain(pv):
+            """Handle readback PVs and Meta PVs"""
+            value = data[pv.pv_name]
+            entry = await self.special_pv_snap_coro(pv, value)
+            await self.callback_coro(snapshot, entry, entry_callback, progress_callback)
+        await asyncio.gather(*(special_pv_chain(pv) for pv in readback_pvs + meta_pvs))
+
+    async def pv_snap_coro(self, pv, value, readback_value=None):
+        if readback_value is not None:
+            edata = self._value_or_default(readback_value)
+            readback = Readback.from_parameter(
+                pv.readback,
+                data=edata.data,
+                status=edata.status,
+                severity=edata.severity,
+            )
+        else:
+            readback = None
+
+        edata = self._value_or_default(value)
+        if pv.read_only:
+            new_entry = Readback.from_parameter(
+                pv,
+                data=edata.data,
+                status=edata.status,
+                severity=edata.severity,
+            )
+        else:
+            new_entry = Setpoint.from_parameter(
+                pv,
+                data=edata.data,
+                status=edata.status,
+                severity=edata.severity,
+                readback=readback,
+            )
+        return new_entry
+
+    async def special_pv_snap_coro(self, pv, value):
+        edata = self._value_or_default(value)
+        new_entry = Readback.from_parameter(
+            pv,
+            data=edata.data,
+            status=edata.status,
+            severity=edata.severity,
+        )
+        return new_entry
+
+    async def callback_coro(self,
+                            snapshot: Snapshot,
+                            entry: Entry,
+                            entry_callback: Optional[Callable[[Entry], None]],
+                            progress_callback: Optional[Callable[[int], None]]):
+        """
+        Coroutine to handle callbacks for snapshot creation.
+        """
+        snapshot.children.append(entry)
+        if entry_callback:
+            entry_callback(entry)
+        if progress_callback:
+            curr_pv_count = len(snapshot.children)
+            progress_callback((curr_pv_count,))
 
     def apply(
         self,

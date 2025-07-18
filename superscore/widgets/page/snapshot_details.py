@@ -14,6 +14,8 @@ class SnapshotDetailsPage(Page):
 
     back_to_main_signal = QtCore.Signal()
     comparison_signal = QtCore.Signal(object, object)
+    entry_snapped_signal = QtCore.Signal(object)
+    snap_progress_signal = QtCore.Signal(tuple)
 
     def __init__(self, parent: QtWidgets.QWidget, client: Client, init_snapshot: Snapshot):
         """Initialize the snapshot details page.
@@ -32,6 +34,9 @@ class SnapshotDetailsPage(Page):
         self.snapshot = init_snapshot
 
         self.init_ui()
+
+        self.entry_snapped_signal.connect(self.snapshot_details_model.add_entry)
+        self.snap_progress_signal.connect(self.progress_bar_middleman)
 
     def init_ui(self) -> None:
         """Initialize the UI for the snapshot details page."""
@@ -107,6 +112,14 @@ class SnapshotDetailsPage(Page):
         self.snapshot_details_table.resizeColumnsToContents()
         snapshot_details_layout.addWidget(self.snapshot_details_table)
 
+        progress_bar_layout = QtWidgets.QHBoxLayout()
+        progress_bar_layout.addSpacerItem(QtWidgets.QSpacerItem(1, 1, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum))
+        self.progress_bar = QtWidgets.QProgressBar(self)
+        self.progress_bar.setTextVisible(True)
+        self.progress_bar.setFormat("Saving Snapshot... %p% (%v / %m)")
+        snapshot_details_layout.addWidget(self.progress_bar)
+        progress_bar_layout.addSpacerItem(QtWidgets.QSpacerItem(1, 1, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum))
+
     def set_snapshot(self, snapshot: Snapshot) -> None:
         """Set the snapshot to be displayed in the details page."""
         if not isinstance(snapshot, Snapshot):
@@ -122,7 +135,7 @@ class SnapshotDetailsPage(Page):
         if self.snapshot.uuid in self.pv_table_models:
             self.snapshot_details_model = self.pv_table_models[self.snapshot.uuid]
         else:
-            self.snapshot_details_model = PVTableModel(self.snapshot.uuid, self.client)
+            self.snapshot_details_model = PVTableModel(self.snapshot, self.client)
             self.pv_table_models[self.snapshot.uuid] = self.snapshot_details_model
         self.snapshot_details_table.setModel(self.snapshot_details_model)
 
@@ -183,6 +196,21 @@ class SnapshotDetailsPage(Page):
             selected_pvs = self.snapshot_details_table.model()._data
         ephemeral_snapshot = Snapshot(children=selected_pvs)
         self.client.apply(ephemeral_snapshot)
+
+    @QtCore.Slot(tuple)
+    def progress_bar_middleman(self, progress: tuple) -> None:
+        """Middleman for the progress bar to handle the signal emitted by the client."""
+        if not (0 < len(progress) < 3):
+            raise ValueError("Progress must be a tuple of (current,) or (current, total).")
+
+        self.progress_bar.setValue(progress[0])
+        if progress[1]:
+            self.progress_bar.setMaximum(progress[1])
+            self.progress_bar.show()
+
+        if self.progress_bar.value() >= self.progress_bar.maximum():
+            self.progress_bar.hide()
+            self.progress_bar.setValue(0)
 
 
 class SnapshotComparisonDialog(QtWidgets.QDialog):
