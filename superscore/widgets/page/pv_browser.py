@@ -56,7 +56,7 @@ class PVBrowserPage(Page):
         pv_browser_layout.addWidget(self.pv_browser_table)
         self.pv_browser_table.resizeColumnsToContents()
 
-        self.search_bar.editingFinished.connect(self.search_bar_middle_man)
+        self.search_bar.textEdited.connect(self.search_bar_middle_man)
         filter_tags.tagSetChanged.connect(self.pv_browser_filter.set_tag_set)
         self.pv_browser_table.doubleClicked.connect(self.open_details_middle_man)
 

@@ -76,10 +76,10 @@ def test_pv_browser_search(qtbot, test_client):
     assert pv_browser_filter.rowCount() == 4
 
     search_bar.setText("PREFIX")
-    search_bar.editingFinished.emit()  # Simulate the editingFinished signal
+    search_bar.textEdited.emit(search_bar.text())  # Simulate the editingFinished signal
     assert pv_browser_filter.rowCount() == 3
     search_bar.setText("test_str")
-    search_bar.editingFinished.emit()
+    search_bar.textEdited.emit(search_bar.text())
     assert pv_browser_filter.rowCount() == 0
 
 
