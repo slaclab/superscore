@@ -99,7 +99,7 @@ class SnapshotDetailsPage(Page):
         self.snapshot_details_table = SquirrelTableView()
         self.snapshot_details_table.setModel(self.snapshot_details_model)
         header_view = self.snapshot_details_table.horizontalHeader()
-        header_view.setSectionResizeMode(header_view.Stretch)
+        header_view.setSectionResizeMode(header_view.ResizeMode.Stretch)
         header_view.setSectionResizeMode(PV_HEADER.CHECKBOX.value, header_view.ResizeMode.Fixed)
         header_view.setSectionResizeMode(PV_HEADER.SEVERITY.value, header_view.ResizeMode.Fixed)
         header_view.setSectionResizeMode(PV_HEADER.DEVICE.value, header_view.ResizeMode.Fixed)
@@ -227,7 +227,7 @@ class SnapshotComparisonDialog(QtWidgets.QDialog):
         self.table_view.doubleClicked.connect(self.accept)
         header_view = self.table_view.horizontalHeader()
         header_view.setSectionResizeMode(header_view.ResizeMode.Fixed)
-        header_view.setSectionResizeMode(1, header_view.Stretch)
+        header_view.setSectionResizeMode(1, header_view.ResizeMode.Stretch)
         self.table_view.resizeColumnsToContents()
         main_layout.addWidget(self.table_view)
 

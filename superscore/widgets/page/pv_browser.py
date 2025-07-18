@@ -50,7 +50,7 @@ class PVBrowserPage(Page):
         self.pv_browser_table.setModel(self.pv_browser_filter)
         self.pv_browser_table.setItemDelegateForColumn(PV_BROWSER_HEADER.TAGS.value, TagDelegate(self.client.backend.get_tags()))
         header_view = self.pv_browser_table.horizontalHeader()
-        header_view.setSectionResizeMode(header_view.Fixed)
+        header_view.setSectionResizeMode(header_view.ResizeMode.Fixed)
         header_view.setStretchLastSection(True)
         header_view.sectionResized.connect(self.pv_browser_table.resizeRowsToContents)
         pv_browser_layout.addWidget(self.pv_browser_table)

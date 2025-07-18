@@ -24,7 +24,7 @@ requirements:
     - aioca
     - apischema
     - pcdsutils
-    - pyqt
+    - pyside6
     - python-dateutil
     - qtawesome
     - qtpy

@@ -184,7 +184,7 @@ class TagEditor(QtWidgets.QWidget):
         self.setLayout(layout)
 
         self.choice_list = QtWidgets.QListWidget()
-        self.choice_list.setSelectionMode(self.choice_list.MultiSelection)
+        self.choice_list.setSelectionMode(self.choice_list.SelectionMode.MultiSelection)
         self.layout().addWidget(self.choice_list)
         self.set_choices(choices)
 
@@ -233,7 +233,7 @@ class TagsWidget(QtWidgets.QWidget):
         The layout containing the widget's tag elements.
     """
 
-    tagSetChanged = QtCore.Signal(dict)
+    tagSetChanged = QtCore.Signal(object)  # PySide6 is cursed
 
     def __init__(
         self,

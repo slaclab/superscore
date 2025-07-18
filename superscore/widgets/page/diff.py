@@ -4,7 +4,6 @@ from functools import partial
 from typing import Any, Dict, Optional
 from uuid import UUID
 
-from PyQt5.QtGui import QCloseEvent
 from qtpy import QtCore, QtGui, QtWidgets
 
 from superscore.compare import DiffType, EntryDiff
@@ -20,9 +19,9 @@ logger = logging.getLogger(__name__)
 
 
 DIFF_COLOR_MAP = {
-    DiffType.DELETED: QtGui.QColor(255, 0, 0, alpha=100),
-    DiffType.MODIFIED: QtGui.QColor(255, 255, 0, alpha=100),
-    DiffType.ADDED: QtGui.QColor(0, 255, 0, alpha=100),
+    DiffType.DELETED: QtGui.QColor(255, 0, 0, a=100),
+    DiffType.MODIFIED: QtGui.QColor(255, 255, 0, a=100),
+    DiffType.ADDED: QtGui.QColor(0, 255, 0, a=100),
     None: None,  # the no modification case, do not change background color
 }
 
@@ -409,7 +408,7 @@ class DiffPage(Display, QtWidgets.QWidget, WindowLinker):
                 model._diff = diff
                 model._linked_uuids = self._linked_uuids
 
-    def closeEvent(self, a0: QCloseEvent) -> None:
+    def closeEvent(self, a0: QtGui.QCloseEvent) -> None:
         for side in Side:
             self.widget_map[side]['pv'].close()
         return super().closeEvent(a0)

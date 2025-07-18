@@ -95,7 +95,7 @@ class SnapshotComparisonPage(Page):
         self.comparison_table = SquirrelTableView()
         self.comparison_table.setModel(self.comparison_table_model)
         header_view = self.comparison_table.horizontalHeader()
-        header_view.setSectionResizeMode(header_view.Stretch)
+        header_view.setSectionResizeMode(header_view.ResizeMode.Stretch)
         header_view.setSectionResizeMode(COMPARE_HEADER.CHECKBOX.value, header_view.ResizeMode.Fixed)
         header_view.setSectionResizeMode(COMPARE_HEADER.SEVERITY.value, header_view.ResizeMode.Fixed)
         header_view.setSectionResizeMode(COMPARE_HEADER.COMPARE_SEVERITY.value, header_view.ResizeMode.Fixed)

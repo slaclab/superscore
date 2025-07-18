@@ -119,7 +119,7 @@ class Window(QtWidgets.QMainWindow, metaclass=QtSingleton):
         self.snapshot_table.verticalHeader().hide()
         header_view = self.snapshot_table.horizontalHeader()
         header_view.setSectionResizeMode(header_view.ResizeMode.Fixed)
-        header_view.setSectionResizeMode(1, header_view.Stretch)
+        header_view.setSectionResizeMode(1, header_view.ResizeMode.Stretch)
         self.snapshot_table.resizeColumnsToContents()
         view_snapshot_layout.addWidget(self.snapshot_table)
         return view_snapshot_page
