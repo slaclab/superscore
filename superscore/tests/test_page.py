@@ -273,7 +273,8 @@ def test_restore_all(
     qtbot.add_widget(detail_page)
     detail_page.restore_from_table()
 
-    table_model = detail_page.snapshot_details_table.model()
+    # get table model through proxy model
+    table_model = detail_page.snapshot_details_table.model().sourceModel()
     all_pv_names = [
         table_model.data(table_model.index(row, PV_HEADER.PV.value), role=QtCore.Qt.DisplayRole) for row in range(table_model.rowCount())
     ]

@@ -97,7 +97,11 @@ class SnapshotDetailsPage(Page):
         self.pv_table_models[self.snapshot.uuid] = self.snapshot_details_model
 
         self.snapshot_details_table = SquirrelTableView()
-        self.snapshot_details_table.setModel(self.snapshot_details_model)
+        proxy_model = QtCore.QSortFilterProxyModel()
+        proxy_model.setSourceModel(self.snapshot_details_model)
+        proxy_model.setFilterKeyColumn(PV_HEADER.PV.value)
+        proxy_model.setFilterCaseSensitivity(False)
+        self.snapshot_details_table.setModel(proxy_model)
         header_view = self.snapshot_details_table.horizontalHeader()
         header_view.setSectionResizeMode(header_view.Stretch)
         header_view.setSectionResizeMode(PV_HEADER.CHECKBOX.value, header_view.ResizeMode.Fixed)
@@ -106,6 +110,7 @@ class SnapshotDetailsPage(Page):
         header_view.setSectionResizeMode(PV_HEADER.PV.value, header_view.ResizeMode.Fixed)
         self.snapshot_details_table.resizeColumnsToContents()
         snapshot_details_layout.addWidget(self.snapshot_details_table)
+        self.search_bar.textEdited.connect(self.snapshot_details_table.model().setFilterFixedString)
 
     def set_snapshot(self, snapshot: Snapshot) -> None:
         """Set the snapshot to be displayed in the details page."""
@@ -124,7 +129,7 @@ class SnapshotDetailsPage(Page):
         else:
             self.snapshot_details_model = PVTableModel(self.snapshot.uuid, self.client)
             self.pv_table_models[self.snapshot.uuid] = self.snapshot_details_model
-        self.snapshot_details_table.setModel(self.snapshot_details_model)
+        self.snapshot_details_table.model().setSourceModel(self.snapshot_details_model)
 
         self.comparison_dialog.set_snapshot(self.snapshot)
 
@@ -178,9 +183,9 @@ class SnapshotDetailsPage(Page):
 
     def restore_from_table(self):
         """Restore checked setpoints from the PV table. If no PVs are selected, restore all."""
-        selected_pvs = self.snapshot_details_table.model().get_selected_pvs()
+        selected_pvs = self.snapshot_details_model.get_selected_pvs()
         if len(selected_pvs) == 0:
-            selected_pvs = self.snapshot_details_table.model()._data
+            selected_pvs = self.snapshot_details_model._data
         ephemeral_snapshot = Snapshot(children=selected_pvs)
         self.client.apply(ephemeral_snapshot)
 
