@@ -2,6 +2,7 @@ import qtawesome as qta
 from qtpy import QtCore, QtWidgets
 
 from superscore.client import Client
+from superscore.permission_manager import PermissionManager
 from superscore.widgets.page.page import Page
 from superscore.widgets.pv_browser_table import (PV_BROWSER_HEADER,
                                                  PVBrowserFilterProxyModel,
@@ -33,11 +34,25 @@ class PVBrowserPage(Page):
             qta.icon("fa5s.search"),
             QtWidgets.QLineEdit.LeadingPosition,
         )
-        search_bar_lyt = QtWidgets.QHBoxLayout()
+
+        self.add_pv_button = QtWidgets.QPushButton()
+        self.add_pv_button.setIcon(qta.icon("ph.plus"))
+        self.add_pv_button.setIconSize(QtCore.QSize(24, 24))
+        self.add_pv_button.setText("Add PV")
+        self.add_pv_button.setObjectName("add-pv-btn")
+
         spacer = QtWidgets.QSpacerItem(1, 1, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
+
+        search_bar_lyt = QtWidgets.QHBoxLayout()
         search_bar_lyt.addWidget(self.search_bar)
         search_bar_lyt.addSpacerItem(spacer)
+        search_bar_lyt.addWidget(self.add_pv_button)
         pv_browser_layout.addLayout(search_bar_lyt)
+
+        permission_manager = PermissionManager.get_instance()
+        if not permission_manager.is_admin():
+            self.add_pv_button.hide()
+        permission_manager.admin_status_changed.connect(self.add_pv_button.setVisible)
 
         filter_tags = TagsWidget(tag_groups=self.client.backend.get_tags(), enabled=True)
         pv_browser_layout.addWidget(filter_tags)
@@ -48,7 +63,10 @@ class PVBrowserPage(Page):
 
         self.pv_browser_table = SquirrelTableView(self)
         self.pv_browser_table.setModel(self.pv_browser_filter)
-        self.pv_browser_table.setItemDelegateForColumn(PV_BROWSER_HEADER.TAGS.value, TagDelegate(self.client.backend.get_tags()))
+        self.pv_browser_table.setItemDelegateForColumn(
+            PV_BROWSER_HEADER.TAGS.value,
+            TagDelegate(self.client.backend.get_tags())
+        )
         header_view = self.pv_browser_table.horizontalHeader()
         header_view.setSectionResizeMode(header_view.ResizeMode.Fixed)
         header_view.setStretchLastSection(True)
@@ -59,6 +77,23 @@ class PVBrowserPage(Page):
         self.search_bar.textEdited.connect(self.search_bar_middle_man)
         filter_tags.tagSetChanged.connect(self.pv_browser_filter.set_tag_set)
         self.pv_browser_table.doubleClicked.connect(self.open_details_middle_man)
+
+        self.setStyleSheet(
+            """
+            QPushButton {
+                padding: 8px;
+                border-radius: 4px;
+                text-align: left;
+            }
+            QPushButton#add-pv-btn {
+                border: 1px solid #555555;
+                background-color: white;
+            }
+            QPushButton#add-pv-btn:hover {
+                background-color: lightgray;
+            }
+            """
+        )
 
     @QtCore.Slot()
     def search_bar_middle_man(self):
