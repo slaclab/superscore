@@ -1,17 +1,20 @@
+from typing import Any, Dict, List
+
 import qtawesome as qta
-from qtpy import QtCore, QtWidgets, QtGui
-from typing import Dict, List, Any
+from qtpy import QtCore, QtGui, QtWidgets
+
 from superscore.client import Client
+from superscore.model import Parameter
+from superscore.permission_manager import PermissionManager
+from superscore.utils import parse_csv_to_dict
 from superscore.widgets.page.page import Page
 from superscore.widgets.pv_browser_table import (PV_BROWSER_HEADER,
+                                                 CSVTableModel,
                                                  PVBrowserFilterProxyModel,
-                                                 PVBrowserTableModel, 
-                                                 CSVTableModel)
+                                                 PVBrowserTableModel)
 from superscore.widgets.squirrel_table_view import SquirrelTableView
 from superscore.widgets.tag import TagDelegate, TagsWidget
-from superscore.utils import parse_csv_to_dict
-from superscore.permission_manager import PermissionManager
-from superscore.model import Parameter 
+
 
 class PVBrowserPage(Page):
 
@@ -43,9 +46,9 @@ class PVBrowserPage(Page):
         search_bar_lyt.addWidget(self.search_bar)
         search_bar_lyt.addSpacerItem(spacer)
 
-        #clear_icon = qta.icon("ph.x-circle-fill", color=superscore.color.GREY, scale_factor=1.1)
-        #self.clear_button.setIcon(clear_icon)
-        
+        # clear_icon = qta.icon("ph.x-circle-fill", color=superscore.color.GREY, scale_factor=1.1)
+        # self.clear_button.setIcon(clear_icon)
+
         self.import_pvs = QtWidgets.QPushButton("import pvs")
         self.import_pvs.setFixedWidth(100)
         self.import_pvs.clicked.connect(self.select_file)
@@ -89,7 +92,7 @@ class PVBrowserPage(Page):
             self.csv_file_path = file_path
             self.csv_data = parse_csv_to_dict(self.csv_file_path)
             self.show_table()
-    
+
     def show_table(self) -> None:
         """Show the parsed cvs data in a table dialog"""
         dialog = CSVTableDialog(self.csv_data, self)
@@ -113,116 +116,116 @@ class PVBrowserPage(Page):
             source_model.refresh()
         elif hasattr(source_model, 'layoutChanged'):
             source_model.layoutChanged.emit()
-             
+
 
 class CSVTableDialog(QtWidgets.QDialog):
     def __init__(self, csv_data: List[Dict[str, Any]], parent=None):
         super().__init__(parent)
         self.csv_data = csv_data
-        self.parent_page = parent  
+        self.parent_page = parent
         self.init_ui()
-        
+
     def init_ui(self):
         self.setWindowTitle("CSV Data Table")
         self.setGeometry(200, 200, 1200, 600)
-        
+
         layout = QtWidgets.QVBoxLayout(self)
-        
+
         info_label = QtWidgets.QLabel(f"Displaying {len(self.csv_data)} rows of CSV data")
         info_label.setFont(QtGui.QFont("Arial", 10, QtGui.QFont.Bold))
         layout.addWidget(info_label)
-        
+
         backend_tag_def = {}
         if self.parent_page and hasattr(self.parent_page, 'client'):
             backend_tag_def = self.parent_page.client.backend.get_tags()
-        
+
         self.model = CSVTableModel(self.csv_data, backend_tag_def)
-        
+
         validation_results = self.model.get_validation_results()
         self._show_validation_feedback(layout, validation_results)
-        
+
         self.table_view = QtWidgets.QTableView()
         self.table_view.setModel(self.model)
-        
+
         tags_column_index = 2
         tag_delegate = TagDelegate(self.model.tag_def, self.table_view)
         self.table_view.setItemDelegateForColumn(tags_column_index, tag_delegate)
-        
+
         self.table_view.setAlternatingRowColors(True)
         self.table_view.setSelectionBehavior(QtWidgets.QTableView.SelectRows)
         self.table_view.horizontalHeader().setStretchLastSection(True)
         self.table_view.verticalHeader().setVisible(False)
-        
+
         self.table_view.resizeColumnsToContents()
-        
+
         layout.addWidget(self.table_view)
-        
+
         button_layout = QtWidgets.QHBoxLayout()
-        
+
         # import_selected_btn = QtWidgets.QPushButton("Import Selected Rows")
         # import_selected_btn.clicked.connect(self.import_selected_data)
         # button_layout.addWidget(import_selected_btn)
-        
+
         import_all_btn = QtWidgets.QPushButton("Import Data")
         import_all_btn.clicked.connect(self.import_data)
         button_layout.addWidget(import_all_btn)
-        
+
         cancel_btn = QtWidgets.QPushButton("Cancel")
         cancel_btn.clicked.connect(self.reject)
         button_layout.addWidget(cancel_btn)
-        
+
         layout.addLayout(button_layout)
 
     '''
     def import_selected_data(self) -> None:
         """Import only selected rows into backend"""
         print("import selected data")
-        
+
         # Get selected rows
         selected_indexes = self.table_view.selectionModel().selectedRows()
-        
+
         if not selected_indexes:
             QtWidgets.QMessageBox.warning(self, "Warning", "Please select rows to import.")
             return
-        
+
         # Extract selected row data
         selected_data = []
         for index in selected_indexes:
             row_data = self.model.data(index, QtCore.Qt.UserRole)
             if row_data:
                 selected_data.append(row_data)
-        
+
         if not selected_data:
             QtWidgets.QMessageBox.warning(self, "Warning", "No valid data selected.")
             return
-        
+
         try:
             # Import selected rows
             success_count, error_count, errors = self._import_rows(selected_data)
-            
+
             # Show results and close dialog
             self._show_import_results(success_count, error_count, errors, len(selected_data))
-            
+
             if success_count > 0:
                 self.accept()  # Close dialog with success
-                
+
         except Exception as e:
             QtWidgets.QMessageBox.critical(self, "Import Error", f"Failed to import selected data: {str(e)}")
             print(f"Import failed: {e}")
     '''
 
     def import_data(self) -> None:
-        """Import all data into backend"""                
+        """Import all data into backend"""
         if not self.csv_data:
             QtWidgets.QMessageBox.warning(self, "Warning", "No data to import.")
             return
-        
+
         try:
             success_count, error_count, errors = self._import_rows(self.csv_data)
             self._show_import_results(success_count, error_count, errors, len(self.csv_data))
-                
+
             if success_count > 0:
-                self.accept()  
+                self.accept()
         except Exception as e:
             QtWidgets.QMessageBox.critical(self, "Import Error", f"Failed to import all data: {str(e)}")
             print(f"Import failed: {e}")
@@ -235,27 +238,27 @@ class CSVTableDialog(QtWidgets.QDialog):
         success_count = 0
         error_count = 0
         errors = []
-        
+
         for i, row_data in enumerate(rows_to_import):
             try:
                 parameter = self._create_parameter_from_row(row_data)
-                
+
                 if self.parent_page and hasattr(self.parent_page, 'client'):
                     self.parent_page.client.add(parameter)
                     success_count += 1
                     print(f"Successfully imported: {row_data['PV']}")
                 else:
                     raise Exception("No client connection available")
-                
+
             except Exception as e:
                 error_count += 1
                 error_msg = f"Row {i+1} ({row_data.get('PV', 'Unknown')}): {str(e)}"
                 errors.append(error_msg)
                 print(f"Failed to import: {error_msg}")
-        
+
         if success_count > 0 and self.parent_page:
             self.parent_page.refresh_table()
-                
+
         return success_count, error_count, errors
 
     def _create_parameter_from_row(self, row_data: Dict[str, Any]):
@@ -263,19 +266,19 @@ class CSVTableDialog(QtWidgets.QDialog):
         pv_name = row_data['PV']
         description = row_data['Description']
         csv_groups = row_data['groups']
-        
+
         tag_def = {}
         if self.parent_page and hasattr(self.parent_page, 'client'):
             tag_def = self.parent_page.client.backend.get_tags()
-        
+
         tagset = self._create_tag_mapping_from_csv(csv_groups, tag_def)
-                
+
         parameter = Parameter(
             pv_name=pv_name,
             description=description,
-            tags=tagset,  
+            tags=tagset,
         )
-        
+
         return parameter
 
     def _create_tag_mapping_from_csv(self, csv_groups: Dict[str, List[str]], tag_def: Dict) -> Dict[int, set]:
@@ -283,19 +286,19 @@ class CSVTableDialog(QtWidgets.QDialog):
         Create a mapping from CSV groups to your tag system.
         """
         tagset = {}
-        
+
         for tag_group_id, (group_name, desc, choices) in tag_def.items():
             csv_values = csv_groups.get(group_name, [])
             tag_ids = set()
-            
+
             for tag_id, tag_name in choices.items():
                 if tag_name in csv_values:
                     tag_ids.add(tag_id)
-            
+
             tagset[tag_group_id] = tag_ids
-        
+
         return tagset
-    
+
     def _show_import_results(self, success_count: int, error_count: int, errors: List[str], total_attempted: int):
         """Show import results to user"""
         if error_count == 0:
@@ -305,10 +308,10 @@ class CSVTableDialog(QtWidgets.QDialog):
                 f"Successfully imported all {success_count} entries."
             )
         elif success_count == 0:
-            error_details = "\n".join(errors[:3])  
+            error_details = "\n".join(errors[:3])
             if len(errors) > 3:
                 error_details += f"\n... and {len(errors) - 3} more errors"
-            
+
             QtWidgets.QMessageBox.critical(
                 self,
                 "Import Failed",
@@ -316,10 +319,10 @@ class CSVTableDialog(QtWidgets.QDialog):
                 f"First few errors:\n{error_details}"
             )
         else:
-            error_details = "\n".join(errors[:3])  
+            error_details = "\n".join(errors[:3])
             if len(errors) > 3:
                 error_details += f"\n... and {len(errors) - 3} more errors"
-            
+
             QtWidgets.QMessageBox.warning(
                 self,
                 "Import Completed with Errors",
@@ -329,17 +332,17 @@ class CSVTableDialog(QtWidgets.QDialog):
                 f"• Total attempted: {total_attempted}\n\n"
                 f"First few errors:\n{error_details}"
             )
-    
+
     def _show_validation_feedback(self, layout, validation_results):
         """Show detailed validation feedback to user"""
         rejected_groups = validation_results['rejected_groups']
         rejected_values = validation_results['rejected_values']
-        
+
         if rejected_groups or rejected_values:
             validation_group = QtWidgets.QGroupBox("Validation Results")
             validation_group.setStyleSheet("QGroupBox { color: orange; font-weight: bold; }")
             validation_layout = QtWidgets.QVBoxLayout(validation_group)
-            
+
             if rejected_groups:
                 group_label = QtWidgets.QLabel(
                     f"Rejected Groups (not found in backend): {', '.join(rejected_groups)}"
@@ -347,12 +350,12 @@ class CSVTableDialog(QtWidgets.QDialog):
                 group_label.setStyleSheet("color: red; padding: 2px;")
                 group_label.setWordWrap(True)
                 validation_layout.addWidget(group_label)
-            
+
             if rejected_values:
                 values_label = QtWidgets.QLabel("Rejected Values:")
                 values_label.setStyleSheet("color: red; padding: 2px;")
                 validation_layout.addWidget(values_label)
-                
+
                 for group_name, rejected_vals in rejected_values.items():
                     val_detail = QtWidgets.QLabel(
                         f"   • {group_name}: {', '.join(sorted(rejected_vals))}"
@@ -360,12 +363,12 @@ class CSVTableDialog(QtWidgets.QDialog):
                     val_detail.setStyleSheet("color: red; padding-left: 10px;")
                     val_detail.setWordWrap(True)
                     validation_layout.addWidget(val_detail)
-            
+
             if self.model.tag_def:
                 available_label = QtWidgets.QLabel("Available Backend Options:")
                 available_label.setStyleSheet("color: green; font-weight: bold; padding: 2px;")
                 validation_layout.addWidget(available_label)
-                
+
                 for tag_group_id, (group_name, desc, choices) in self.model.tag_def.items():
                     option_detail = QtWidgets.QLabel(
                         f"   • {group_name}: {', '.join(sorted(choices.values()))}"
@@ -373,62 +376,62 @@ class CSVTableDialog(QtWidgets.QDialog):
                     option_detail.setStyleSheet("color: green; padding-left: 10px;")
                     option_detail.setWordWrap(True)
                     validation_layout.addWidget(option_detail)
-            
+
             layout.addWidget(validation_group)
 
 
 class TagMappingDialog(QtWidgets.QDialog):
     """Dialog to help users map CSV groups to existing tag groups"""
-    
+
     def __init__(self, csv_groups: List[str], tag_def: Dict, parent=None):
         super().__init__(parent)
         self.csv_groups = csv_groups
         self.tag_def = tag_def
         self.mappings = {}
         self.init_ui()
-    
+
     def init_ui(self):
         self.setWindowTitle("Map CSV Groups to Tags")
         self.setGeometry(300, 300, 500, 400)
-        
+
         layout = QtWidgets.QVBoxLayout(self)
-        
+
         label = QtWidgets.QLabel("Map your CSV groups to existing tag groups:")
         layout.addWidget(label)
-        
+
         self.mapping_widgets = {}
         for csv_group in self.csv_groups:
             group_layout = QtWidgets.QHBoxLayout()
-            
+
             csv_label = QtWidgets.QLabel(f"'{csv_group}' →")
             csv_label.setFixedWidth(150)
             group_layout.addWidget(csv_label)
-            
+
             combo = QtWidgets.QComboBox()
             combo.addItem("(Skip this group)")
             for tag_group_id, (group_name, desc, choices) in self.tag_def.items():
                 combo.addItem(group_name, tag_group_id)
-            
+
             group_layout.addWidget(combo)
             layout.addLayout(group_layout)
-            
+
             self.mapping_widgets[csv_group] = combo
-        
+
         button_layout = QtWidgets.QHBoxLayout()
         ok_button = QtWidgets.QPushButton("OK")
         ok_button.clicked.connect(self.accept)
         cancel_button = QtWidgets.QPushButton("Cancel")
         cancel_button.clicked.connect(self.reject)
-        
+
         button_layout.addWidget(ok_button)
         button_layout.addWidget(cancel_button)
         layout.addLayout(button_layout)
-    
+
     def get_mappings(self) -> Dict[str, int]:
         """Return the selected mappings"""
         mappings = {}
         for csv_group, combo in self.mapping_widgets.items():
             tag_group_id = combo.currentData()
-            if tag_group_id is not None:  
+            if tag_group_id is not None:
                 mappings[csv_group] = tag_group_id
         return mappings

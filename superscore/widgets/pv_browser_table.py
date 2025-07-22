@@ -1,6 +1,7 @@
 import logging
 from enum import Enum, auto
-from typing import Dict, List, Any
+from typing import Any, Dict, List
+
 from qtpy import QtCore
 
 from superscore.model import Parameter
@@ -145,38 +146,38 @@ class CSVTableModel(QtCore.QAbstractTableModel):
         self.backend_tag_def = backend_tag_def or {}
         self.tag_def = self._filter_to_existing_backend_groups()
         self._headers = self._build_headers()
-        
-        self.rejected_groups = []  
-        self.rejected_values = {}  
+
+        self.rejected_groups = []
+        self.rejected_values = {}
         self.validation_summary = self._create_validation_summary()
-        
+
     def _build_headers(self) -> List[str]:
         """Build headers from the first row of data"""
         if not self._data:
             return []
-        
-        headers = ['PV', 'Description', 'Tags']  
+
+        headers = ['PV', 'Description', 'Tags']
         return headers
-    
+
     def rowCount(self, parent=QtCore.QModelIndex()) -> int:
         return len(self._data)
-    
+
     def columnCount(self, parent=QtCore.QModelIndex()) -> int:
         return len(self._headers)
-    
+
     def headerData(self, section: int, orientation: QtCore.Qt.Orientation, role: int = QtCore.Qt.DisplayRole):
         if orientation == QtCore.Qt.Horizontal and role == QtCore.Qt.DisplayRole:
             if 0 <= section < len(self._headers):
                 return self._headers[section]
         return None
-    
+
     def data(self, index: QtCore.QModelIndex, role: int = QtCore.Qt.DisplayRole):
         if not index.isValid() or not (0 <= index.row() < len(self._data)):
             return None
-        
+
         row_data = self._data[index.row()]
         column_name = self._headers[index.column()]
-        
+
         if role == QtCore.Qt.DisplayRole:
             if column_name == 'PV':
                 return row_data.get('PV', '')
@@ -184,7 +185,7 @@ class CSVTableModel(QtCore.QAbstractTableModel):
                 return row_data.get('Description', '')
             elif column_name == 'Tags':
                 return self._convert_groups_to_tagset(row_data.get('groups', {}))
-        
+
         elif role == QtCore.Qt.ToolTipRole:
             if column_name == 'PV':
                 return f"PV: {row_data.get('PV', '')}"
@@ -197,32 +198,32 @@ class CSVTableModel(QtCore.QAbstractTableModel):
                     if values:
                         tooltip_text += f"{group_name}: {', '.join(values)}\n"
                 return tooltip_text.strip()
-        
+
         elif role == QtCore.Qt.UserRole:
             return row_data
-        
+
         return None
-    
+
     def _filter_to_existing_backend_groups(self) -> Dict:
         """Only include CSV groups that exist in backend"""
         if not self._data or not self.backend_tag_def:
             return {}
-        
+
         csv_groups = {}
         for row in self._data:
             for group_name, values in row.get('groups', {}).items():
                 if group_name not in csv_groups:
                     csv_groups[group_name] = set()
                 csv_groups[group_name].update(values)
-        
+
         backend_group_names = {details[0]: tag_group_id for tag_group_id, details in self.backend_tag_def.items()}
-        
+
         # print(f"DEBUG: CSV groups found: {list(csv_groups.keys())}")
         # print(f"DEBUG: Backend groups available: {list(backend_group_names.keys())}")
-        
+
         filtered_tag_def = {}
         self.rejected_groups = []
-        
+
         for csv_group_name in csv_groups.keys():
             if csv_group_name in backend_group_names:
                 backend_id = backend_group_names[csv_group_name]
@@ -231,25 +232,25 @@ class CSVTableModel(QtCore.QAbstractTableModel):
             else:
                 self.rejected_groups.append(csv_group_name)
                 # print(f"DEBUG: REJECTED CSV group '{csv_group_name}' - not found in backend")
-        
+
         return filtered_tag_def
-    
+
     def _convert_groups_to_tagset(self, csv_groups: Dict[str, List[str]]) -> Dict[int, set]:
         """Convert CSV groups to TagSet format with value-level validation"""
         tagset = {}
-        row_rejected_values = {}  
-        
+        row_rejected_values = {}
+
         for tag_group_id, (group_name, desc, choices) in self.tag_def.items():
             csv_group_values = csv_groups.get(group_name, [])
             tag_ids = set()
             rejected_values_for_group = []
-            
+
             backend_values = set(choices.values())
-            
+
             # print(f"DEBUG: Processing group '{group_name}'")
             # print(f"DEBUG: - CSV values: {csv_group_values}")
             # print(f"DEBUG: - Backend values: {list(backend_values)}")
-            
+
             # Validate each CSV value against backend choices
             for csv_value in csv_group_values:
                 if csv_value in backend_values:
@@ -261,39 +262,39 @@ class CSVTableModel(QtCore.QAbstractTableModel):
                 else:
                     rejected_values_for_group.append(csv_value)
                     # print(f"DEBUG: - REJECTED value '{csv_value}' (not in backend choices)")
-            
+
             if rejected_values_for_group:
                 if group_name not in self.rejected_values:
                     self.rejected_values[group_name] = set()
                 self.rejected_values[group_name].update(rejected_values_for_group)
                 row_rejected_values[group_name] = rejected_values_for_group
-            
+
             tagset[tag_group_id] = tag_ids
-        
+
         if row_rejected_values:
             print(f"DEBUG: Row rejected values: {row_rejected_values}")
-        
+
         return tagset
-    
+
     def _create_validation_summary(self) -> str:
         """Create a summary of validation results"""
         summary_parts = []
-        
+
         if self.rejected_groups:
             summary_parts.append(f"Rejected groups: {', '.join(self.rejected_groups)}")
-        
+
         if self.rejected_values:
             value_parts = []
             for group_name, rejected_vals in self.rejected_values.items():
                 value_parts.append(f"{group_name}: {', '.join(sorted(rejected_vals))}")
             summary_parts.append(f"Rejected values: {' | '.join(value_parts)}")
-        
+
         return " • ".join(summary_parts) if summary_parts else "All groups and values are valid"
-    
+
     def get_validation_results(self) -> Dict:
         """Return comprehensive validation results"""
         return {
             'rejected_groups': self.rejected_groups,
-            'rejected_values': dict(self.rejected_values),  
+            'rejected_values': dict(self.rejected_values),
             'summary': self.validation_summary
         }
