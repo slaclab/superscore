@@ -1,9 +1,9 @@
-__all__ = ['BACKENDS']
+__all__ = ['BACKENDS', 'SearchTermType']
 
 import logging
 from typing import Dict
 
-from .core import _Backend
+from .core import SearchTermType, _Backend
 
 logger = logging.getLogger(__name__)
 
