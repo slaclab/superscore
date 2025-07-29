@@ -16,7 +16,7 @@ Configuration Management for EPICS PVs
 Requirements
 ------------
 
-* Python 3.9+
+* Python 3.10+
 
 Installation
 ------------
@@ -25,9 +25,12 @@ Installation
 
   $ conda create --name superscore pip
   $ conda activate superscore
-  $ pip install .  # install statically, and only include packages necessary to run
+  $
+  $ conda install --file requirements.txt  # install statically, and only include packages necessary to run
+  $ pip install .
   $ #or
-  $ pip install -e .[test]  # install as editable package, and include packages for development and testing
+  $ conda install --file requirements.txt --file dev-requirements.txt # include packages for development and testing
+  $ pip install -e .  # install as editable package 
 
 Running the Tests
 -----------------
