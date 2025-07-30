@@ -11,6 +11,7 @@ logger = logging.getLogger(__name__)
 
 ENDPOINTS = {
     "TAGS": "/v1/tags",
+    "PVS": "/v1/pvs",
 }
 
 
@@ -28,11 +29,13 @@ class MongoBackend(_Backend):
                 if target is Snapshot:
                     pass
                 else:
-                    entries = self._get_all_pvs()
+                    entries = self.get_all_pvs()
         for entry in entries:
             conditions = []
             for attr, op, target in search_terms:
-                if attr == "ancestor":
+                if attr == "entry_type":
+                    conditions.append(isinstance(entry, target))
+                elif attr == "ancestor":
                     pass
                 else:
                     try:
@@ -41,8 +44,8 @@ class MongoBackend(_Backend):
                         conditions.append(self.compare(op, value, target))
                     except AttributeError:
                         conditions.append(False)
-                if all(conditions):
-                    yield entry
+            if all(conditions):
+                yield entry
 
     def get_tags(self) -> TagDef:
         tag_def = {}
@@ -117,23 +120,60 @@ class MongoBackend(_Backend):
         logger.debug(f"{r.request.method} {r.url} with response {r.status_code} ({r.reason})")
         r.raise_for_status()
 
-    def _get_all_pvs(self) -> Iterable[Parameter]:
+    def add_pv(self, pv_name, description, abs_tolerance=0, rel_tolerance=0, read_only=False) -> Parameter:
+        body = {
+            "pvName": pv_name,
+            "description": description,
+            "absTolerance": abs_tolerance,
+            "relTolerance": rel_tolerance,
+            "readOnly": read_only,
+        }
+        r = requests.post(self.address + ENDPOINTS["PVS"], json=body)
+        logger.debug(f"{r.request.method} {r.url} with response {r.status_code} ({r.reason})")
+        r.raise_for_status()
+        pv_dict = r.json()["payload"]
+        return self._unpack_pv(pv_dict)
+
+    def update_pv(self, pv_id, pv_name="", description="", abs_tolerance=None, rel_tolerance=None, read_only=None) -> None:
+        body = {}
+        if pv_name:
+            body["pvName"] = pv_name
+        if description:
+            body["description"] = description
+        if abs_tolerance is not None:
+            body["absTolerance"] = abs_tolerance
+        if rel_tolerance is not None:
+            body["relTolerance"] = rel_tolerance
+        if read_only is not None:
+            body["readOnly"] = read_only
+        r = requests.put(self.address + ENDPOINTS["PVS"] + f"/{pv_id}", json=body)
+        logger.debug(f"{r.request.method} {r.url} with response {r.status_code} ({r.reason})")
+        r.raise_for_status()
+
+    def archive_pv(self, pv_id) -> None:
+        r = requests.delete(self.address + ENDPOINTS["PVS"] + f"/{pv_id}")
+        logger.debug(f"{r.request.method} {r.url} with response {r.status_code} ({r.reason})")
+        r.raise_for_status()
+
+    def get_all_pvs(self) -> Iterable[Parameter]:
         r = requests.get(self.address + "/v1/pvs")
         r.raise_for_status()
-        return [
-            Parameter(
-                uuid=d["id"],
-                pv_name=d["pvName"],
-                description=d["description"],
-                abs_tolerance=d["absTolerance"],
-                rel_tolerance=d["relTolerance"],
-                read_only=d["readOnly"],
-                creation_time=d["createdDate"],
-            ) for d in r.json()["payload"]
-        ]
+        return [self._unpack_pv(d) for d in r.json()["payload"]]
 
     def get_meta_pvs(self) -> Iterable[Parameter]:
         return []
 
     def set_meta_pvs(self, meta_pvs: Iterable[Parameter]) -> None:
         return
+
+    def _unpack_pv(self, pv_dict):
+        return Parameter(
+            uuid=pv_dict["id"],
+            pv_name=pv_dict["pvName"],
+            description=pv_dict["description"],
+            tags=self._unpack_tags(pv_dict["tags"]),
+            abs_tolerance=pv_dict["absTolerance"],
+            rel_tolerance=pv_dict["relTolerance"],
+            read_only=pv_dict["readOnly"],
+            creation_time=pv_dict["createdDate"],
+        )

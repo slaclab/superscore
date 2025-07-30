@@ -88,6 +88,11 @@ class PVBrowserTableModel(QtCore.QAbstractTableModel):
             return entry
         return None
 
+    def add_pv(self, pv: Parameter):
+        self.beginInsertRows(QtCore.QModelIndex(), 0, 0)
+        self._data.append(pv)
+        self.endInsertRows()
+
 
 class PVBrowserFilterProxyModel(QtCore.QSortFilterProxyModel):
     def __init__(self, parent=None, tag_set: TagSet = None):

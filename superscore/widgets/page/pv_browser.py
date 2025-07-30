@@ -13,7 +13,8 @@ from superscore.widgets.tag import TagDelegate, TagsWidget
 
 class PVBrowserPage(Page):
 
-    open_details_signal = QtCore.Signal(QtCore.QModelIndex, QtWidgets.QAbstractItemView)
+    sigOpenPVDetails = QtCore.Signal(QtCore.QModelIndex, QtWidgets.QAbstractItemView)
+    sigAddPV = QtCore.Signal()
 
     def __init__(self, client: Client, parent: QtWidgets.QWidget = None):
         super().__init__(parent)
@@ -37,9 +38,10 @@ class PVBrowserPage(Page):
 
         self.add_pv_button = QtWidgets.QPushButton()
         self.add_pv_button.setIcon(qta.icon("ph.plus"))
-        self.add_pv_button.setIconSize(QtCore.QSize(24, 24))
+        self.add_pv_button.setIconSize(QtCore.QSize(16, 16))
         self.add_pv_button.setText("Add PV")
         self.add_pv_button.setObjectName("add-pv-btn")
+        self.add_pv_button.clicked.connect(self.sigAddPV)
 
         spacer = QtWidgets.QSpacerItem(1, 1, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
 
@@ -104,4 +106,4 @@ class PVBrowserPage(Page):
     def open_details_middle_man(self, index: QtCore.QModelIndex):
         if not isinstance(index, QtCore.QModelIndex) or not index.isValid():
             return
-        self.open_details_signal.emit(index, self.pv_browser_table)
+        self.sigOpenPVDetails.emit(index, self.pv_browser_table)
