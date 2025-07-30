@@ -2,6 +2,7 @@ import logging
 from enum import Enum, auto
 from typing import Any
 
+import qtawesome as qta
 from qtpy import QtCore
 
 from superscore.model import PV
@@ -17,6 +18,7 @@ class PV_BROWSER_HEADER(Enum):
     PV = auto()
     READBACK = auto()
     TAGS = auto()
+    DELETE = auto()
 
     def display_string(self) -> str:
         return self._strings[self]
@@ -28,6 +30,7 @@ PV_BROWSER_HEADER._strings = {
     PV_BROWSER_HEADER.PV: "PV Name",
     PV_BROWSER_HEADER.READBACK: "Readback",
     PV_BROWSER_HEADER.TAGS: "Tags",
+    PV_BROWSER_HEADER.DELETE: "",
 }
 
 
@@ -82,11 +85,33 @@ class PVBrowserTableModel(QtCore.QAbstractTableModel):
                 return entry.readback or NO_DATA
             elif column == PV_BROWSER_HEADER.TAGS:
                 return entry.tags if entry.tags else {}
+        elif role == QtCore.Qt.DecorationRole:
+            if column == PV_BROWSER_HEADER.DELETE:
+                return qta.icon("msc.trash")
         elif role == QtCore.Qt.UserRole:
             # Return the full entry object for further processing
             entry = self._data[index.row()]
             return entry
         return None
+
+    def add_pv(self, pv: PV):
+        i = len(self._data)
+        self.beginInsertRows(QtCore.QModelIndex(), i, i)
+        self._data.append(pv)
+        self.endInsertRows()
+
+    def removeRow(self, row, parent=None):
+        index = self.index(row, PV_BROWSER_HEADER.PV.value)
+        pv = self.data(index, QtCore.Qt.UserRole)
+        try:
+            self.client.backend.archive_pv(pv.uuid)
+        except Exception as e:
+            logger.exception(e)
+        else:
+            parent = parent or QtCore.QModelIndex()
+            self.beginRemoveRows(parent, row, row)
+            del self._data[row]
+            self.endRemoveRows()
 
 
 class PVBrowserFilterProxyModel(QtCore.QSortFilterProxyModel):

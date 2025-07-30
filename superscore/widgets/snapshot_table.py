@@ -35,7 +35,7 @@ class SnapshotTableModel(QtCore.QAbstractTableModel):
         if role == QtCore.Qt.DisplayRole:
             snapshot = self._data[index.row()]
             if column == 0:
-                return snapshot.creation_time.strftime("%Y-%m-%d %H:%M:%S")
+                return snapshot.creation_time.astimezone().strftime("%Y-%m-%d %H:%M:%S")
             elif column == 1:
                 return snapshot.title
             else:

@@ -1,5 +1,5 @@
 import logging
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from typing import Iterable
 
 import requests
@@ -13,6 +13,7 @@ logger = logging.getLogger(__name__)
 
 ENDPOINTS = {
     "TAGS": "/v1/tags",
+    "PVS": "/v1/pvs",
 }
 
 
@@ -32,11 +33,13 @@ class MongoBackend(_Backend):
                 if target is Snapshot:
                     pass
                 else:
-                    entries = self._get_all_pvs()
+                    entries = self.get_all_pvs()
         for entry in entries:
             conditions = []
             for attr, op, target in search_terms:
-                if attr == "ancestor":
+                if attr == "entry_type":
+                    conditions.append(isinstance(entry, target))
+                elif attr == "ancestor":
                     pass
                 else:
                     try:
@@ -45,8 +48,8 @@ class MongoBackend(_Backend):
                         conditions.append(self.compare(op, value, target))
                     except AttributeError:
                         conditions.append(False)
-                if all(conditions):
-                    yield entry
+            if all(conditions):
+                yield entry
 
     def get_tags(self) -> TagDef:
         if datetime.now() - self._last_tag_fetch > timedelta(minutes=1):
@@ -124,20 +127,54 @@ class MongoBackend(_Backend):
         logger.debug(f"{r.request.method} {r.url} with response {r.status_code} ({r.reason})")
         self._raise_for_status(r)
 
-    def _get_all_pvs(self) -> Iterable[PV]:
+    def add_pv(
+        self,
+        setpoint,
+        readback,
+        description,
+        abs_tolerance=0,
+        rel_tolerance=0,
+        config_address=None,
+    ) -> PV:
+        body = {
+            "setpointAddress": setpoint,
+            "readbackAddress": readback,
+            "configAddress": config_address,
+            "description": description,
+            "absTolerance": abs_tolerance,
+            "relTolerance": rel_tolerance,
+            "readOnly": False,
+        }
+        r = requests.post(self.address + ENDPOINTS["PVS"], json=body)
+        logger.debug(f"{r.request.method} {r.url} with response {r.status_code} ({r.reason})")
+        self._raise_for_status(r)
+        pv_dict = r.json()["payload"]
+        return self._unpack_pv(pv_dict)
+
+    def update_pv(self, pv_id, setpoint="", description="", tags=None, abs_tolerance=None, rel_tolerance=None) -> None:
+        body = {}
+        if setpoint:
+            body["setpointAddress"] = setpoint
+        if description:
+            body["description"] = description
+        if abs_tolerance is not None:
+            body["absTolerance"] = abs_tolerance
+        if rel_tolerance is not None:
+            body["relTolerance"] = rel_tolerance
+        body["readOnly"] = False
+        r = requests.put(self.address + ENDPOINTS["PVS"] + f"/{pv_id}", json=body)
+        logger.debug(f"{r.request.method} {r.url} with response {r.status_code} ({r.reason})")
+        self._raise_for_status(r)
+
+    def archive_pv(self, pv_id) -> None:
+        r = requests.delete(self.address + ENDPOINTS["PVS"] + f"/{pv_id}")
+        logger.debug(f"{r.request.method} {r.url} with response {r.status_code} ({r.reason})")
+        self._raise_for_status(r)
+
+    def get_all_pvs(self) -> Iterable[PV]:
         r = requests.get(self.address + "/v1/pvs")
         self._raise_for_status(r)
-        return [
-            PV(
-                uuid=d["id"],
-                setpoint=d["pvName"],
-                description=d["description"],
-                abs_tolerance=d["absTolerance"],
-                rel_tolerance=d["relTolerance"],
-                read_only=d["readOnly"],
-                creation_time=d["createdDate"],
-            ) for d in r.json()["payload"]
-        ]
+        return [self._unpack_pv(d) for d in r.json()["payload"]]
 
     def get_meta_pvs(self) -> Iterable[PV]:
         return []
@@ -155,3 +192,15 @@ class MongoBackend(_Backend):
             # server response can have "errorMessage" or "message" key depending on error
             message = response.json().get("errorMessage", "") or response.json().get("message", e)
             raise BackendError(message)
+
+    def _unpack_pv(self, pv_dict):
+        return PV(
+            uuid=pv_dict["id"],
+            setpoint=pv_dict.get("setpointAddress"),
+            readback=pv_dict.get("readbackAddress"),
+            config=pv_dict.get("configAddress"),
+            description=pv_dict["description"],
+            abs_tolerance=pv_dict["absTolerance"],
+            rel_tolerance=pv_dict["relTolerance"],
+            creation_time=datetime.fromisoformat(pv_dict["createdDate"]).replace(tzinfo=UTC),
+        )

@@ -9,6 +9,7 @@ from functools import partial
 from typing import Optional
 
 import qtawesome as qta
+from epicscorelibs.ca.cadef import CAException
 from qtpy import QtCore, QtWidgets
 from qtpy.QtGui import QCloseEvent
 
@@ -22,7 +23,9 @@ from superscore.widgets.page.page import Page
 from superscore.widgets.page.pv_browser import PVBrowserPage
 from superscore.widgets.page.snapshot_comparison import SnapshotComparisonPage
 from superscore.widgets.page.snapshot_details import SnapshotDetailsPage
-from superscore.widgets.pv_details_components import PVDetails, PVDetailsPopup
+from superscore.widgets.pv_details_components import (PVDetails,
+                                                      PVDetailsPopup,
+                                                      PVDetailsPopupEditable)
 from superscore.widgets.pv_table import PVTableModel
 from superscore.widgets.snapshot_table import (SnapshotFilterModel,
                                                SnapshotTableModel)
@@ -193,7 +196,8 @@ class Window(QtWidgets.QMainWindow, metaclass=QtSingleton):
     def init_pv_browser_page(self) -> PVBrowserPage:
         """Initialize the PV browser page with the PV browser table."""
         pv_browser_page = PVBrowserPage(self.client, self)
-        pv_browser_page.open_details_signal.connect(self.open_pv_details)
+        pv_browser_page.sigOpenPVDetails.connect(self.open_pv_details)
+        pv_browser_page.sigAddPV.connect(self.open_new_pv_dialog)
 
         return pv_browser_page
 
@@ -314,7 +318,12 @@ class Window(QtWidgets.QMainWindow, metaclass=QtSingleton):
         self.main_content_stack.setCurrentWidget(self.comparison_page)
 
     @QtCore.Slot(QtCore.QModelIndex, QtWidgets.QAbstractItemView)
-    def open_pv_details(self, index: QtCore.QModelIndex, view: QtWidgets.QAbstractItemView) -> None:
+    def open_pv_details(
+        self,
+        index: QtCore.QModelIndex,
+        view: QtWidgets.QAbstractItemView,
+        editable=False,
+    ) -> None:
         if not index.isValid():
             logger.warning("Invalid index passed to open_pv_details")
             return
@@ -329,8 +338,11 @@ class Window(QtWidgets.QMainWindow, metaclass=QtSingleton):
             raise TypeError("Invalid model type passed to open_pv_details")
 
         # Get data via the client for alarm limits
-        epics_data: EpicsData
-        epics_data = self.client.cl.get(data.readback or data.setpoint)
+        epics_data: EpicsData = None
+        try:
+            epics_data = self.client.cl.get(data.readback or data.setpoint)
+        except CAException as e:
+            logging.exception(e)
 
         pv_details = PVDetails(
             pv_name=data.setpoint,
@@ -348,11 +360,34 @@ class Window(QtWidgets.QMainWindow, metaclass=QtSingleton):
         self.popup.adjustSize()
 
         table_top_right = view.mapToGlobal(view.rect().topRight())
-
         x = table_top_right.x() - self.popup.width()
         y = table_top_right.y()
-
         self.popup.move(x, y)
+
+        self.popup.show()
+
+    @QtCore.Slot(QtWidgets.QAbstractItemView)
+    def open_new_pv_dialog(self) -> None:
+        self.popup = PVDetailsPopupEditable(
+            tag_groups=self.client.backend.get_tags(),
+        )
+        self.popup.adjustSize()
+
+        def add_pv():
+            try:
+                pv = self.client.backend.add_pv(
+                    self.popup.pv_details.pv_name or None,
+                    self.popup.pv_details.readback_name or None,
+                    self.popup.pv_details.description,
+                    abs_tolerance=self.popup.pv_details.tolerance_abs,
+                    rel_tolerance=self.popup.pv_details.tolerance_rel,
+                )
+            except Exception as e:
+                logger.exception(e)
+            else:
+                self.pv_browser_page.pv_browser_table.model().sourceModel().add_pv(pv)
+
+        self.popup.accepted.connect(add_pv)
         self.popup.show()
 
     def closeEvent(self, a0: QCloseEvent) -> None:
@@ -401,7 +436,7 @@ class NavigationPanel(QtWidgets.QWidget):
             QPushButton[icon-only="true"] {
                 text-align: center;
             }
-        """
+            """
         )
 
         self.expanded = True
