@@ -7,9 +7,8 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum, auto
 from typing import List, Optional
-from uuid import UUID, uuid4
 
-from superscore.type_hints import AnyEpicsType, TagSet
+from superscore.type_hints import UUID, AnyEpicsType, TagSet
 from superscore.utils import utcnow
 
 logger = logging.getLogger(__name__)
@@ -70,7 +69,7 @@ class EpicsData:
 @dataclass
 class PV:
     """"""
-    uuid: UUID = field(default_factory=uuid4)
+    uuid: UUID = ""
     description: str = ""
     setpoint: str = ""
     readback: str = ""
@@ -86,7 +85,7 @@ class PV:
     # timeout: Optional[float] = None
 
     def __post_init__(self) -> None:
-        if isinstance(self.uuid, str):
+        if not isinstance(self.uuid, UUID):
             self.uuid = UUID(self.uuid)
         return
 
@@ -94,7 +93,7 @@ class PV:
 @dataclass
 class Snapshot:
     """"""
-    uuid: UUID = field(default_factory=uuid4)
+    uuid: UUID = ""
     description: str = ""
     title: str = ""
     pvs: List[PV] = field(default_factory=list)
