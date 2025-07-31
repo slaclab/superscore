@@ -8,16 +8,15 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum, auto
 from typing import List, Optional, Sequence, Union
-from uuid import UUID, uuid4
 
 import apischema
 
 from superscore.serialization import as_tagged_union
-from superscore.type_hints import AnyEpicsType, TagDef, TagSet
+from superscore.type_hints import UUID, AnyEpicsType, TagDef, TagSet
 from superscore.utils import utcnow
 
 logger = logging.getLogger(__name__)
-_root_uuid = _root_uuid = UUID("a28cd77d-cc92-46cc-90cb-758f0f36f041")
+_root_uuid = _root_uuid = "a28cd77d-cc92-46cc-90cb-758f0f36f041"
 
 
 class Severity(Enum):
@@ -58,14 +57,9 @@ class Entry:
     """
     Base class for items in the data model
     """
-    uuid: UUID = field(default_factory=uuid4)
+    uuid: UUID = ""
     description: str = ""
     creation_time: datetime = field(default_factory=utcnow)
-
-    def __post_init__(self) -> None:
-        if isinstance(self.uuid, str):
-            self.uuid = UUID(self.uuid)
-        return
 
     def swap_to_uuids(self) -> List[Union[Entry, UUID]]:
         """
