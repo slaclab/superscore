@@ -9,6 +9,7 @@ import argparse
 import asyncio
 import importlib
 import logging
+import sys
 from inspect import iscoroutinefunction
 
 import superscore
@@ -103,6 +104,11 @@ def main():
     log_level = kwargs.pop('log_level')
     admin_mode = kwargs.pop('admin')
     logger.setLevel(log_level)
+    handler = logging.StreamHandler(sys.stdout)
+    handler.setLevel(log_level)
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
 
     if admin_mode:
         permission_manager = PermissionManager.get_instance()
