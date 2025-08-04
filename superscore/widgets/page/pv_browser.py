@@ -51,11 +51,6 @@ class PVBrowserPage(Page):
         search_bar_lyt.addWidget(self.add_pv_button)
         pv_browser_layout.addLayout(search_bar_lyt)
 
-        permission_manager = PermissionManager.get_instance()
-        if not permission_manager.is_admin():
-            self.add_pv_button.hide()
-        permission_manager.admin_status_changed.connect(self.add_pv_button.setVisible)
-
         filter_tags = TagsWidget(tag_groups=self.client.backend.get_tags(), enabled=True)
         pv_browser_layout.addWidget(filter_tags)
 
@@ -71,7 +66,7 @@ class PVBrowserPage(Page):
         )
         header_view = self.pv_browser_table.horizontalHeader()
         header_view.setSectionResizeMode(header_view.ResizeMode.Fixed)
-        header_view.setStretchLastSection(True)
+        header_view.setSectionResizeMode(PV_BROWSER_HEADER.TAGS.value, header_view.ResizeMode.Stretch)
         header_view.sectionResized.connect(self.pv_browser_table.resizeRowsToContents)
         pv_browser_layout.addWidget(self.pv_browser_table)
         self.pv_browser_table.resizeColumnsToContents()
@@ -79,6 +74,20 @@ class PVBrowserPage(Page):
         self.search_bar.textEdited.connect(self.search_bar_middle_man)
         filter_tags.tagSetChanged.connect(self.pv_browser_filter.set_tag_set)
         self.pv_browser_table.doubleClicked.connect(self.open_details_middle_man)
+
+        permission_manager = PermissionManager.get_instance()
+        if not permission_manager.is_admin():
+            self.add_pv_button.hide()
+            self.pv_browser_table.setColumnHidden(PV_BROWSER_HEADER.DELETE.value, True)
+        permission_manager.admin_status_changed.connect(self.add_pv_button.setVisible)
+        permission_manager.admin_status_changed.connect(
+            lambda is_admin: self.pv_browser_table.setColumnHidden(
+                PV_BROWSER_HEADER.DELETE.value,
+                not is_admin,
+            )
+        )
+
+        self.pv_browser_table.clicked.connect(self.maybe_delete_row)
 
         self.setStyleSheet(
             """
@@ -96,6 +105,11 @@ class PVBrowserPage(Page):
             }
             """
         )
+
+    @QtCore.Slot(QtCore.QModelIndex)
+    def maybe_delete_row(self, index):
+        if index.column() == PV_BROWSER_HEADER.DELETE.value:
+            self.pv_browser_table.model().sourceModel().removeRow(index.row())
 
     @QtCore.Slot()
     def search_bar_middle_man(self):
