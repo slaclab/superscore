@@ -132,6 +132,7 @@ class MongoBackend(_Backend):
         setpoint,
         readback,
         description,
+        tags: TagSet = None,
         abs_tolerance=0,
         rel_tolerance=0,
         config_address=None,
@@ -143,6 +144,7 @@ class MongoBackend(_Backend):
             "description": description,
             "absTolerance": abs_tolerance,
             "relTolerance": rel_tolerance,
+            "tags": self._pack_tags(tags) if tags else [],
             "readOnly": False,
         }
         r = requests.post(self.address + ENDPOINTS["PVS"], json=body)
@@ -157,6 +159,8 @@ class MongoBackend(_Backend):
             body["setpointAddress"] = setpoint
         if description:
             body["description"] = description
+        if tags:
+            body["tags"] = self._pack_tags(tags)
         if abs_tolerance is not None:
             body["absTolerance"] = abs_tolerance
         if rel_tolerance is not None:
@@ -193,6 +197,23 @@ class MongoBackend(_Backend):
             message = response.json().get("errorMessage", "") or response.json().get("message", e)
             raise BackendError(message)
 
+    def _unpack_tags(self, tag_list):
+        tag_def = self.get_tags()
+        id_to_group = {
+            tag_id: group for group, group_def in tag_def.items() for tag_id in group_def[2]
+        }
+        tag_set = {}
+        for d in tag_list:
+            group = id_to_group[d["id"]]
+            if group not in tag_set:
+                tag_set[group] = set()
+            tag_set[group].add(d["id"])
+        return tag_set
+
+    @staticmethod
+    def _pack_tags(tags: TagSet):
+        return [tag for group in tags.values() for tag in group]
+
     def _unpack_pv(self, pv_dict):
         return PV(
             uuid=pv_dict["id"],
@@ -200,6 +221,7 @@ class MongoBackend(_Backend):
             readback=pv_dict.get("readbackAddress"),
             config=pv_dict.get("configAddress"),
             description=pv_dict["description"],
+            tags=self._unpack_tags(pv_dict["tags"]),
             abs_tolerance=pv_dict["absTolerance"],
             rel_tolerance=pv_dict["relTolerance"],
             creation_time=datetime.fromisoformat(pv_dict["createdDate"]).replace(tzinfo=UTC),
