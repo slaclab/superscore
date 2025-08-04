@@ -5,7 +5,7 @@ import requests
 
 from superscore.backends import SearchTermType, _Backend
 from superscore.model import Entry, Parameter, Snapshot
-from superscore.type_hints import TagDef
+from superscore.type_hints import TagDef, TagSet
 
 logger = logging.getLogger(__name__)
 
@@ -120,12 +120,21 @@ class MongoBackend(_Backend):
         logger.debug(f"{r.request.method} {r.url} with response {r.status_code} ({r.reason})")
         r.raise_for_status()
 
-    def add_pv(self, pv_name, description, abs_tolerance=0, rel_tolerance=0, read_only=False) -> Parameter:
+    def add_pv(
+        self,
+        pv_name,
+        description,
+        tags: TagSet = None,
+        abs_tolerance=0,
+        rel_tolerance=0,
+        read_only=False
+    ) -> Parameter:
         body = {
             "pvName": pv_name,
             "description": description,
             "absTolerance": abs_tolerance,
             "relTolerance": rel_tolerance,
+            "tags": self._pack_tags(tags) if tags else [],
             "readOnly": read_only,
         }
         r = requests.post(self.address + ENDPOINTS["PVS"], json=body)
@@ -134,12 +143,14 @@ class MongoBackend(_Backend):
         pv_dict = r.json()["payload"]
         return self._unpack_pv(pv_dict)
 
-    def update_pv(self, pv_id, pv_name="", description="", abs_tolerance=None, rel_tolerance=None, read_only=None) -> None:
+    def update_pv(self, pv_id, pv_name="", description="", tags=None, abs_tolerance=None, rel_tolerance=None, read_only=None) -> None:
         body = {}
         if pv_name:
             body["pvName"] = pv_name
         if description:
             body["description"] = description
+        if tags:
+            body["tags"] = self._pack_tags(tags)
         if abs_tolerance is not None:
             body["absTolerance"] = abs_tolerance
         if rel_tolerance is not None:
@@ -165,6 +176,23 @@ class MongoBackend(_Backend):
 
     def set_meta_pvs(self, meta_pvs: Iterable[Parameter]) -> None:
         return
+
+    def _unpack_tags(self, tag_list):
+        tag_def = self.get_tags()
+        id_to_group = {
+            tag_id: group for group, group_def in tag_def.items() for tag_id in group_def[2]
+        }
+        tag_set = {}
+        for d in tag_list:
+            group = id_to_group[d["id"]]
+            if group not in tag_set:
+                tag_set[group] = set()
+            tag_set[group].add(d["id"])
+        return tag_set
+
+    @staticmethod
+    def _pack_tags(tags: TagSet):
+        return [tag for group in tags.values() for tag in group]
 
     def _unpack_pv(self, pv_dict):
         return Parameter(
