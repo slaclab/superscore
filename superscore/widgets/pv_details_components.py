@@ -109,9 +109,10 @@ class PVDetailsRow(QBoxLayout):
 class PVDetailsPopup(QWidget):
     """Read-only popup displaying PV details."""
 
-    def __init__(self, tag_groups: TagDef, pv_details: PVDetails, parent: QWidget = None) -> None:
+    def __init__(self, tag_groups: TagDef, pv_details: PVDetails, pv_id=None, parent: QWidget = None) -> None:
         super().__init__(parent)
         self.setWindowFlags(Qt.Popup)
+        self.pv_id = pv_id
 
         layout = QVBoxLayout(self)
 
@@ -146,11 +147,12 @@ class PVDetailsPopup(QWidget):
 class PVDetailsPopupEditable(QDialog):
     """Editable popup for creating or editing PVs."""
 
-    def __init__(self, tag_groups: TagDef, pv_details: PVDetails = None) -> None:
+    def __init__(self, tag_groups: TagDef, pv_details: PVDetails = None, pv_id=None) -> None:
         super().__init__()
         self.setWindowFlags(Qt.FramelessWindowHint | Qt.Dialog)
         self.setWindowModality(Qt.ApplicationModal)
         self.setMinimumWidth(300)
+        self.pv_id = pv_id
         self.pv_details = None
 
         layout = QVBoxLayout(self)

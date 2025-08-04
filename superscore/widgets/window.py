@@ -360,6 +360,7 @@ class Window(QtWidgets.QMainWindow, metaclass=QtSingleton):
         self.popup = popup_class(
             tag_groups=self.client.backend.get_tags(),
             pv_details=pv_details,
+            pv_id=data.uuid
         )
         self.popup.adjustSize()
 
