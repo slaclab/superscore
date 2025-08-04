@@ -113,6 +113,18 @@ class PVBrowserTableModel(QtCore.QAbstractTableModel):
             del self._data[row]
             self.endRemoveRows()
 
+    def refetch_row(self, row):
+        index = self.index(row, PV_BROWSER_HEADER.PV.value)
+        pv_id = self.data(index, QtCore.Qt.UserRole).uuid
+        pv = list(
+            self.client.search(
+                ("entry_type", "eq", PV),
+                ("uuid", "eq", pv_id),
+            )
+        )[0]
+        self._data[row] = pv
+        self.dataChanged.emit(index, index)
+
 
 class PVBrowserFilterProxyModel(QtCore.QSortFilterProxyModel):
     def __init__(self, parent=None, tag_set: TagSet = None):
