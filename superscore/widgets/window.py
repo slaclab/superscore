@@ -16,6 +16,7 @@ import superscore.color
 from superscore.client import Client
 from superscore.control_layers._base_shim import EpicsData
 from superscore.model import Parameter, Readback, Setpoint, Snapshot
+from superscore.permission_manager import PermissionManager
 from superscore.widgets.configure_window import TagGroupsWindow
 from superscore.widgets.core import NameDescTagsWidget, QtSingleton
 from superscore.widgets.date_range import DateRangeWidget
@@ -49,6 +50,8 @@ class Window(QtWidgets.QMainWindow, metaclass=QtSingleton):
             self.client = Client.from_config()
         self.pages: set[Page] = set()
         self.setup_ui()
+
+        self.permission_manager = PermissionManager.get_instance()
 
     def setup_ui(self) -> None:
         self.navigation_panel = self.init_nav_panel()
@@ -180,9 +183,8 @@ class Window(QtWidgets.QMainWindow, metaclass=QtSingleton):
     def init_pv_browser_page(self) -> PVBrowserPage:
         """Initialize the PV browser page with the PV browser table."""
         pv_browser_page = PVBrowserPage(self.client, self)
-        pv_browser_page.sigOpenPVDetails.connect(self.open_pv_details)
+        pv_browser_page.sigOpenPVDetails.connect(self.open_pv_editor)
         pv_browser_page.sigAddPV.connect(self.open_new_pv_dialog)
-
         return pv_browser_page
 
     def init_configure_page(self) -> QtWidgets.QWidget:
@@ -280,6 +282,10 @@ class Window(QtWidgets.QMainWindow, metaclass=QtSingleton):
         self.main_content_stack.setCurrentWidget(self.comparison_page)
 
     @QtCore.Slot(QtCore.QModelIndex, QtWidgets.QAbstractItemView)
+    def open_pv_editor(self, index: QtCore.QModelIndex, view: QtWidgets.QAbstractItemView):
+        self.open_pv_details(index, view, editable=self.permission_manager.is_admin())
+
+    @QtCore.Slot(QtCore.QModelIndex, QtWidgets.QAbstractItemView)
     def open_pv_details(
         self,
         index: QtCore.QModelIndex,
@@ -320,6 +326,9 @@ class Window(QtWidgets.QMainWindow, metaclass=QtSingleton):
             pv_details=pv_details,
             pv_id=data.uuid
         )
+        if editable:
+            self.popup.accepted.connect(self.update_pv)
+            self.popup.accepted.connect(lambda: view.model().sourceModel().refetch_row(index.row()))
         self.popup.adjustSize()
 
         table_top_right = view.mapToGlobal(view.rect().topRight())
@@ -328,6 +337,18 @@ class Window(QtWidgets.QMainWindow, metaclass=QtSingleton):
         self.popup.move(x, y)
 
         self.popup.show()
+
+    @QtCore.Slot()
+    def update_pv(self):
+        pv_id = self.sender().pv_id
+        pv_details = self.sender().pv_details
+        self.client.backend.update_pv(
+            pv_id,
+            pv_name=pv_details.pv_name,
+            description=pv_details.description,
+            abs_tolerance=pv_details.tolerance_abs,
+            rel_tolerance=pv_details.tolerance_rel,
+        )
 
     @QtCore.Slot(QtWidgets.QAbstractItemView)
     def open_new_pv_dialog(self) -> None:
