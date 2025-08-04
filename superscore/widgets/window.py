@@ -388,6 +388,7 @@ class Window(QtWidgets.QMainWindow, metaclass=QtSingleton):
             pv_id,
             pv_name=pv_details.pv_name,
             description=pv_details.description,
+            tags=pv_details.tags,
             abs_tolerance=pv_details.tolerance_abs,
             rel_tolerance=pv_details.tolerance_rel,
         )
@@ -407,6 +408,7 @@ class Window(QtWidgets.QMainWindow, metaclass=QtSingleton):
                     self.popup.pv_details.description,
                     abs_tolerance=self.popup.pv_details.tolerance_abs,
                     rel_tolerance=self.popup.pv_details.tolerance_rel,
+                    tags=self.popup.pv_details.tags,
                 )
             except Exception as e:
                 logger.exception(e)
