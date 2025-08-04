@@ -356,7 +356,11 @@ class Window(QtWidgets.QMainWindow, metaclass=QtSingleton):
             hihi=epics_data.upper_alarm_limit if isinstance(epics_data, EpicsData) else None,
             tags=data.tags,
         )
-        self.popup = PVDetailsPopup(tag_groups=self.client.backend.get_tags(), pv_details=pv_details)
+        popup_class = PVDetailsPopupEditable if editable else PVDetailsPopup
+        self.popup = popup_class(
+            tag_groups=self.client.backend.get_tags(),
+            pv_details=pv_details,
+        )
         self.popup.adjustSize()
 
         table_top_right = view.mapToGlobal(view.rect().topRight())

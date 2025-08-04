@@ -146,7 +146,7 @@ class PVDetailsPopup(QWidget):
 class PVDetailsPopupEditable(QDialog):
     """Editable popup for creating or editing PVs."""
 
-    def __init__(self, tag_groups: TagDef, initial_data: PVDetails = None) -> None:
+    def __init__(self, tag_groups: TagDef, pv_details: PVDetails = None) -> None:
         super().__init__()
         self.setWindowFlags(Qt.FramelessWindowHint | Qt.Dialog)
         self.setWindowModality(Qt.ApplicationModal)
@@ -155,7 +155,7 @@ class PVDetailsPopupEditable(QDialog):
 
         layout = QVBoxLayout(self)
 
-        title_text = f"Edit PV: {initial_data.pv_name}" if initial_data else "Create New PV"
+        title_text = f"Edit PV: {pv_details.pv_name}" if pv_details else "Create New PV"
         title_bar = PVDetailsTitleBar(title_text, self)
         layout.addWidget(title_bar)
 
@@ -168,19 +168,19 @@ class PVDetailsPopupEditable(QDialog):
         self.tolerance_rel_input = QLineEdit()
 
         self.tags_input = TagsWidget(tag_groups=tag_groups, enabled=True)
-        if initial_data:
-            self.tags_input.set_tags(initial_data.tags)
+        if pv_details:
+            self.tags_input.set_tags(pv_details.tags)
 
         validator = QDoubleValidator(bottom=0.0, top=1e10, decimals=4)
         self.tolerance_abs_input.setValidator(validator)
         self.tolerance_rel_input.setValidator(validator)
 
-        if initial_data:
-            self.pv_name_input.setText(initial_data.pv_name)
-            self.readback_name_input.setText(initial_data.readback_name)
-            self.description_input.setText(initial_data.description)
-            self.tolerance_abs_input.setText(str(initial_data.tolerance_abs))
-            self.tolerance_rel_input.setText(str(initial_data.tolerance_rel))
+        if pv_details:
+            self.pv_name_input.setText(pv_details.pv_name)
+            self.readback_name_input.setText(pv_details.readback_name)
+            self.description_input.setText(pv_details.description)
+            self.tolerance_abs_input.setText(str(pv_details.tolerance_abs))
+            self.tolerance_rel_input.setText(str(pv_details.tolerance_rel))
 
         form_layout.addWidget(QLabel("PV Name"), 0, 0)
         form_layout.addWidget(self.pv_name_input, 0, 1)
@@ -214,7 +214,7 @@ class PVDetailsPopupEditable(QDialog):
 
         layout.addLayout(form_layout)
 
-        submit_text = "Save Changes" if initial_data else "Create PV"
+        submit_text = "Save Changes" if pv_details else "Create PV"
         create_button = QPushButton(submit_text)
         create_button.setStyleSheet("background-color: grey;")
         create_button.clicked.connect(self.handle_submit)
@@ -266,7 +266,7 @@ if __name__ == "__main__":
     readonly_popup.show()
 
     def show_editable_popup():
-        editable_popup = PVDetailsPopupEditable(tag_groups=tag_groups, initial_data=pv_details)
+        editable_popup = PVDetailsPopupEditable(tag_groups=tag_groups, pv_details=pv_details)
         if editable_popup.exec_() == QDialog.Accepted:
             print("PV Details Submitted:")
             print(f"PV Name: {editable_popup.pv_details.pv_name}")
