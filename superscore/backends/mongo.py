@@ -4,6 +4,7 @@ from typing import Generator, Iterable
 import requests
 
 from superscore.backends import SearchTermType, _Backend
+from superscore.errors import BackendError
 from superscore.model import Entry, Parameter, Snapshot
 from superscore.type_hints import TagDef, TagSet
 
@@ -71,7 +72,10 @@ class MongoBackend(_Backend):
         }
         r = requests.post(self.address + ENDPOINTS["TAGS"], json=body)
         logger.debug(f"{r.request.method} {r.url} with response {r.status_code} ({r.reason})")
-        r.raise_for_status()
+        try:
+            r.raise_for_status()
+        except requests.HTTPError as e:
+            raise BackendError(e)
         return r.json()["payload"]["id"]
 
     def update_tag_group(self, group_id, name="", description=""):
@@ -82,12 +86,18 @@ class MongoBackend(_Backend):
             body["description"] = description
         r = requests.put(self.address + ENDPOINTS["TAGS"] + f"/{group_id}", json=body)
         logger.debug(f"{r.request.method} {r.url} with response {r.status_code} ({r.reason})")
-        r.raise_for_status()
+        try:
+            r.raise_for_status()
+        except requests.HTTPError as e:
+            raise BackendError(e)
 
     def delete_tag_group(self, group_id):
         r = requests.delete(self.address + ENDPOINTS["TAGS"] + f"/{group_id}", params={"force": True})
         logger.debug(f"{r.request.method} {r.url} with response {r.status_code} ({r.reason})")
-        r.raise_for_status()
+        try:
+            r.raise_for_status()
+        except requests.HTTPError as e:
+            raise BackendError(e)
 
     def add_tag_to_group(self, group_id: int, name, description=""):
         params = {
@@ -99,7 +109,10 @@ class MongoBackend(_Backend):
         }
         r = requests.put(self.address + ENDPOINTS["TAGS"] + f"/{group_id}/tags", params=params, json=body)
         logger.debug(f"{r.request.method} {r.url} with response {r.status_code} ({r.reason})")
-        r.raise_for_status()
+        try:
+            r.raise_for_status()
+        except requests.HTTPError as e:
+            raise BackendError(e)
 
     def update_tag_in_group(self, group_id, tag_id, name="", description=""):
         params = {
@@ -113,12 +126,18 @@ class MongoBackend(_Backend):
             body["description"] = description
         r = requests.put(self.address + ENDPOINTS["TAGS"] + f"/{group_id}/tags/{tag_id}", params=params, json=body)
         logger.debug(f"{r.request.method} {r.url} with response {r.status_code} ({r.reason})")
-        r.raise_for_status()
+        try:
+            r.raise_for_status()
+        except requests.HTTPError as e:
+            raise BackendError(e)
 
     def delete_tag_from_group(self, group_id, tag_id):
         r = requests.delete(self.address + ENDPOINTS["TAGS"] + f"/{group_id}/tags/{tag_id}")
         logger.debug(f"{r.request.method} {r.url} with response {r.status_code} ({r.reason})")
-        r.raise_for_status()
+        try:
+            r.raise_for_status()
+        except requests.HTTPError as e:
+            raise BackendError(e)
 
     def add_pv(
         self,
@@ -139,7 +158,10 @@ class MongoBackend(_Backend):
         }
         r = requests.post(self.address + ENDPOINTS["PVS"], json=body)
         logger.debug(f"{r.request.method} {r.url} with response {r.status_code} ({r.reason})")
-        r.raise_for_status()
+        try:
+            r.raise_for_status()
+        except requests.HTTPError as e:
+            raise BackendError(e)
         pv_dict = r.json()["payload"]
         return self._unpack_pv(pv_dict)
 
@@ -159,16 +181,25 @@ class MongoBackend(_Backend):
             body["readOnly"] = read_only
         r = requests.put(self.address + ENDPOINTS["PVS"] + f"/{pv_id}", json=body)
         logger.debug(f"{r.request.method} {r.url} with response {r.status_code} ({r.reason})")
-        r.raise_for_status()
+        try:
+            r.raise_for_status()
+        except requests.HTTPError as e:
+            raise BackendError(e)
 
     def archive_pv(self, pv_id) -> None:
         r = requests.delete(self.address + ENDPOINTS["PVS"] + f"/{pv_id}")
         logger.debug(f"{r.request.method} {r.url} with response {r.status_code} ({r.reason})")
-        r.raise_for_status()
+        try:
+            r.raise_for_status()
+        except requests.HTTPError as e:
+            raise BackendError(e)
 
     def get_all_pvs(self) -> Iterable[Parameter]:
         r = requests.get(self.address + "/v1/pvs")
-        r.raise_for_status()
+        try:
+            r.raise_for_status()
+        except requests.HTTPError as e:
+            raise BackendError(e)
         return [self._unpack_pv(d) for d in r.json()["payload"]]
 
     def get_meta_pvs(self) -> Iterable[Parameter]:
