@@ -5,7 +5,8 @@ import requests
 
 from superscore.backends import SearchTermType, _Backend
 from superscore.errors import BackendError
-from superscore.model import Entry, Parameter, Snapshot
+from superscore.model import (Entry, Parameter, Setpoint, Severity, Snapshot,
+                              Status)
 from superscore.type_hints import TagDef, TagSet
 
 logger = logging.getLogger(__name__)
@@ -28,7 +29,7 @@ class MongoBackend(_Backend):
         for attr, op, target in search_terms:
             if attr == "entry_type":
                 if target is Snapshot:
-                    pass
+                    entries = self.get_snapshots()
                 else:
                     entries = self.get_all_pvs()
         for entry in entries:
@@ -202,6 +203,46 @@ class MongoBackend(_Backend):
             raise BackendError(e)
         return [self._unpack_pv(d) for d in r.json()["payload"]]
 
+    def add_snapshot(self, snapshot: Snapshot) -> None:
+        r = requests.post(
+            self.address + "/v1/snapshots",
+            json=self._pack_snapshot(snapshot)
+        )
+        if not r.status_code == requests.codes.ok:
+            pass
+
+    def get_snapshots(self, uuid=None, title="", tags=None, meta_pvs=None) -> Iterable[Snapshot]:
+        if uuid:
+            r = requests.get(self.address + f"/v1/snapshots/{uuid}")
+            if r.status_code == requests.codes.ok:
+                snapshot_dict = r.json()["payload"]
+                return self._unpack_snapshot(snapshot_dict)
+
+        tags = tags or {}
+        meta_pvs = meta_pvs or []
+        r = requests.get(
+            self.address + "/v1/snapshots",
+            params={
+                "title": title,
+                "tags": tags,
+                "metadataPVs": meta_pvs,
+            }
+        )
+        try:
+            r.raise_for_status()
+        except requests.HTTPError as e:
+            raise BackendError(e)
+        return [self._unpack_snapshot_metadata(snapshot_dict) for snapshot_dict in r.json()["payload"]]
+
+    def update_snapshot(self) -> None:
+        raise NotImplementedError
+
+    def get_snapshots_in_date_range(self) -> None:
+        raise NotImplementedError
+
+    def get_snapshots_in_index_range(self) -> None:
+        raise NotImplementedError
+
     def get_meta_pvs(self) -> Iterable[Parameter]:
         return []
 
@@ -236,3 +277,55 @@ class MongoBackend(_Backend):
             read_only=pv_dict["readOnly"],
             creation_time=pv_dict["createdDate"],
         )
+
+    @staticmethod
+    def _unpack_snapshot_metadata(metadata_dict):
+        return Snapshot(
+            uuid=metadata_dict["id"],
+            title=metadata_dict["title"],
+            description=metadata_dict["description"],
+            tags=metadata_dict["tags"],
+            meta_pvs=[
+                Setpoint(
+                    pv_name=pv["pvName"],
+                    data=pv["data"],
+                    status=getattr(Status, pv["status"]),
+                    severity=getattr(Severity, pv["severity"]),
+                    creation_time=pv["createdDate"],
+                ) for pv in metadata_dict["metadataPVs"]
+            ],
+        )
+
+    @staticmethod
+    def _unpack_snapshot(snapshot_dict) -> Snapshot:
+        return Snapshot(
+            uuid=snapshot_dict["id"],
+            title=snapshot_dict["title"],
+            description=snapshot_dict["description"],
+            tags=snapshot_dict["tags"],
+            children=[
+                Setpoint(
+                    pv_name=pv["pvName"],
+                    data=pv["data"],
+                    status=getattr(Status, pv["status"]),
+                    severity=getattr(Severity, pv["severity"]),
+                    creation_time=pv["createdDate"],
+                ) for pv in snapshot_dict["data"]
+            ],
+            creation_time=snapshot_dict["createdDate"],
+        )
+
+    @staticmethod
+    def _pack_snapshot(snapshot: Snapshot) -> dict:
+        return {
+            "title": snapshot.title,
+            "description": snapshot.description,
+            "values": [
+                {
+                    "pvName": pv.pv_name,
+                    "status": pv.status.name,
+                    "severity": pv.severity.name,
+                    "data": pv.data,
+                } for pv in snapshot.children
+            ]
+        }
