@@ -1,3 +1,5 @@
+import operator
+
 from qtpy import QtCore
 
 from superscore.model import Snapshot
@@ -80,19 +82,65 @@ class SnapshotTableModel(QtCore.QAbstractTableModel):
 
 
 class SnapshotFilterModel(QtCore.QSortFilterProxyModel):
+    SUPPORTED_OPERATORS = {
+        "=": operator.eq,
+        "!=": operator.ne,
+        "<": operator.lt,
+        "<=": operator.le,
+        ">": operator.gt,
+        ">=": operator.ge,
+    }
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.setFilterKeyColumn(1)
         self.since = QtCore.QDate.currentDate().addYears(-1)
         self.until = QtCore.QDate.currentDate()
+        self.filters = []  # List that contains: [{column, operator, value}]
 
     def filterAcceptsRow(self, row: int, parent: QtCore.QModelIndex) -> bool:
         datetime = self.sourceModel()._data[row].creation_time
         date = QtCore.QDate(datetime.year, datetime.month, datetime.day)
         is_date_in_range = self.since <= date and date <= self.until
-        return is_date_in_range and super().filterAcceptsRow(row, parent)
+
+        if not is_date_in_range:
+            return False
+
+        # Meta PV filtering
+        snapshot = self.sourceModel()._data[row]
+        for meta_pv_filter in self.filters:
+            column_name = meta_pv_filter["column"]
+            input_operator = meta_pv_filter["operator"]
+            input_value = meta_pv_filter["value"]
+
+            comparison_function = self.SUPPORTED_OPERATORS.get(input_operator)
+
+            # Retrieve the data for the corresponding meta_pv
+            matching_pvs = [pv for pv in snapshot.meta_pvs if pv.description == column_name]
+            pv_value = matching_pvs[0].data
+
+            try:
+                pv_value = float(pv_value)
+                input_value = float(input_value)
+            except (ValueError, TypeError):
+                pv_value = str(pv_value)
+                input_value = str(input_value)
+
+            try:
+                if not comparison_function(pv_value, input_value):
+                    return False
+            except Exception as e:
+                print(f'Exception applying filter: {e}')
+                return False
+
+        return super().filterAcceptsRow(row, parent)
 
     def setDateRange(self, since: QtCore.QDate, until: QtCore.QDate):
         self.since = since
         self.until = until
+        self.invalidateFilter()
+
+    def setMetaPVFilters(self, filters: list[dict]) -> None:
+        """Set the filters that will be applied to the meta pv columns"""
+        self.filters = filters
         self.invalidateFilter()
