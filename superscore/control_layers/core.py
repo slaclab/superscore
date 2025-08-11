@@ -8,9 +8,9 @@ from collections.abc import Iterable
 from functools import singledispatchmethod
 from typing import Any, Callable, Dict, List, Optional, Union
 
-from superscore.control_layers._base_shim import EpicsData
 from superscore.control_layers.status import TaskStatus
 from superscore.errors import CommunicationError
+from superscore.model import EpicsData
 
 from ._aioca import AiocaShim
 from ._base_shim import _BaseShim

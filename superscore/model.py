@@ -3,21 +3,16 @@
 from __future__ import annotations
 
 import logging
-from copy import deepcopy
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum, auto
-from typing import List, Optional, Sequence, Union
+from typing import List, Optional
 from uuid import UUID, uuid4
 
-import apischema
-
-from superscore.serialization import as_tagged_union
-from superscore.type_hints import AnyEpicsType, TagDef, TagSet
+from superscore.type_hints import AnyEpicsType, TagSet
 from superscore.utils import utcnow
 
 logger = logging.getLogger(__name__)
-_root_uuid = _root_uuid = UUID("a28cd77d-cc92-46cc-90cb-758f0f36f041")
 
 
 class Severity(Enum):
@@ -52,236 +47,57 @@ class Status(Enum):
     WRITE_ACCESS = auto()
 
 
-@as_tagged_union
 @dataclass
-class Entry:
-    """
-    Base class for items in the data model
-    """
+class EpicsData:
+    """Unified EPICS data type for holding data and relevant metadata"""
+    data: Optional[AnyEpicsType] = None
+    status: Severity = Status.UDF
+    severity: Status = Severity.INVALID
+    timestamp: datetime = field(default_factory=utcnow)
+
+    # Extra metadata
+    units: Optional[str] = None
+    precision: Optional[int] = None
+    upper_ctrl_limit: Optional[float] = None
+    lower_ctrl_limit: Optional[float] = None
+    lower_alarm_limit: Optional[float] = None  # LOLO
+    upper_alarm_limit: Optional[float] = None  # HIHI
+    lower_warning_limit: Optional[float] = None  # LOW
+    upper_warning_limit: Optional[float] = None  # HIGH
+    enums: Optional[list[str]] = None
+
+
+@dataclass
+class PV:
+    """"""
     uuid: UUID = field(default_factory=uuid4)
     description: str = ""
+    setpoint: str = ""
+    readback: str = ""
+    config: str = ""
+    setpoint_data: EpicsData = field(default_factory=EpicsData)
+    readback_data: EpicsData = field(default_factory=EpicsData)
+    config_data: EpicsData = field(default_factory=EpicsData)
+    device: str = ""
+    tags: TagSet = field(default_factory=dict)
+    abs_tolerance: Optional[float] = None
+    rel_tolerance: Optional[float] = None
     creation_time: datetime = field(default_factory=utcnow)
+    # timeout: Optional[float] = None
 
     def __post_init__(self) -> None:
         if isinstance(self.uuid, str):
             self.uuid = UUID(self.uuid)
         return
 
-    def swap_to_uuids(self) -> List[Union[Entry, UUID]]:
-        """
-        Swap to UUID references where relevant.
-
-        Returns a list of objects referenced by this Entry,
-        either an Entry's that has been swapped to UUIDs,
-        or a UUID if it was already filled with a UUID.
-        """
-        return []
-
-    def validate(self, toplevel: bool = True) -> bool:
-        """
-        Ensures Entry is properly formed.
-
-        Raises apischema.ValidationError if type checking fails during
-        deserialization
-        """
-        if toplevel:
-            try:
-                serial = apischema.serialize(self)
-                apischema.deserialize(type(self), serial)
-                return True
-            except apischema.ValidationError:
-                return False
-        else:
-            return True
-
 
 @dataclass
-class Parameter(Entry):
-    """An Entry that stores a PV name"""
-    pv_name: str = ""
-    abs_tolerance: Optional[float] = None
-    rel_tolerance: Optional[float] = None
-    tags: TagSet = field(default_factory=dict)
-    readback: Optional[Parameter] = None
-    read_only: bool = False
-
-    def validate(self, toplevel: bool = True) -> bool:
-        readback_is_valid = self.readback is None or self.readback.validate(toplevel=False)
-        return readback_is_valid and super().validate(toplevel=toplevel)
-
-
-@dataclass
-class Setpoint(Entry):
-    """A Value that can be written to the EPICS environment"""
-    pv_name: str = ""
-    data: Optional[AnyEpicsType] = None
-    status: Status = Status.UDF
-    severity: Severity = Severity.INVALID
-    tags: TagSet = field(default_factory=dict)
-    readback: Optional[Readback] = None
-
-    @classmethod
-    def from_parameter(
-        cls,
-        origin: Parameter,
-        data: AnyEpicsType,
-        status: Status = Status.UDF,
-        severity: Severity = Severity.INVALID,
-        readback: Optional[Readback] = None,
-    ) -> Setpoint:
-
-        return cls(
-            pv_name=origin.pv_name,
-            description=origin.description,
-            tags=deepcopy(origin.tags),
-            data=data,
-            status=status,
-            severity=severity,
-            readback=readback,
-        )
-
-    def validate(self, toplevel: bool = True) -> bool:
-        readback_is_valid = self.readback is None or self.readback.validate(toplevel=False)
-        return readback_is_valid and super().validate(toplevel=toplevel)
-
-
-@dataclass
-class Readback(Entry):
-    """
-    A read-only Value representing machine state that cannot be written to. A
-    restore is considered complete when all Setpoint values are within
-    tolerance of their Readback values.
-
-    abs_tolerance - tolerance given in units matching the Setpoint
-    rel_tolerance - tolerance given as a percentage
-    timeout - time (seconds) after which a Setpoint restore is considered to
-              have failed
-    """
-    pv_name: str = ""
-    data: Optional[AnyEpicsType] = None
-    status: Status = Status.UDF
-    severity: Severity = Severity.INVALID
-    abs_tolerance: Optional[float] = None
-    rel_tolerance: Optional[float] = None
-    timeout: Optional[float] = None
-    tags: TagSet = field(default_factory=dict)
-
-    @classmethod
-    def from_parameter(
-        cls,
-        origin: Parameter,
-        data: AnyEpicsType,
-        status: Status = Status.UDF,
-        severity: Severity = Severity.INVALID,
-        timeout: Optional[float] = None,
-    ) -> Readback:
-
-        return cls(
-            pv_name=origin.pv_name,
-            description=origin.description,
-            tags=deepcopy(origin.tags),
-            data=data,
-            status=status,
-            severity=severity,
-            abs_tolerance=origin.abs_tolerance,
-            rel_tolerance=origin.rel_tolerance,
-            timeout=timeout,
-        )
-
-
-class Nestable:
-    """Mix-in class that provides methods for nested container Entries"""
-    def validate(self, toplevel: bool = True):
-        """
-        Validates self and all children. If toplevel, also validates structure
-        of the Entry tree. This avoids redundant work by only performing tree-
-        level validation once.
-
-        Overrides Entry.validate().
-        """
-        tree_is_valid = not toplevel or (not self.has_cycle() and super().validate(toplevel=True))
-        return tree_is_valid and all(child.validate(toplevel=False) for child in self.children)
-
-    def has_cycle(self, parents=None) -> bool:
-        if parents is None:
-            parents = frozenset()
-
-        if self.uuid in parents:
-            return True
-        else:
-            parents_including_self = parents | {self.uuid}
-            for child in self.children:
-                if isinstance(child, type(self)) and child.has_cycle(parents=parents_including_self):
-                    return True
-            return False
-
-
-@dataclass
-class Collection(Nestable, Entry):
-    """Nestable group of Parameters and Collections"""
+class Snapshot:
+    """"""
+    uuid: UUID = field(default_factory=uuid4)
+    description: str = ""
     title: str = ""
-    children: List[Union[UUID, Parameter, Collection]] = field(default_factory=list)
-    tags: TagSet = field(default_factory=dict)
-
-    def swap_to_uuids(self) -> List[Entry]:
-        # TODO: remove ref_list? copies .children by value, breaks refs?
-        ref_list = []
-
-        new_children = []
-        for child in self.children:
-            if isinstance(child, Entry):
-                uuid_ref = child.uuid
-            else:
-                uuid_ref = child
-
-            new_children.append(uuid_ref)
-            ref_list.append(child)
-
-        self.children = new_children
-        return ref_list
-
-
-@dataclass
-class Snapshot(Nestable, Entry):
-    """
-    Nestable group of Values and Snapshots.  Effectively a data-filled Collection
-    """
-    title: str = ""
-    origin_collection: Optional[Union[UUID, Collection]] = None
-    children: List[Union[UUID, Readback, Setpoint, Snapshot]] = field(
-        default_factory=list
-    )
-    tags: TagSet = field(default_factory=dict)
-    meta_pvs: List[Readback] = field(default_factory=list)
-
-    def swap_to_uuids(self) -> List[Union[Entry, UUID]]:
-        ref_list = []
-
-        if isinstance(self.origin_collection, Entry):
-            ref_list.append(self.origin_collection)
-
-            origin_ref = self.origin_collection.uuid
-            self.origin_collection = origin_ref
-
-        new_children = []
-        for child in self.children:
-            if isinstance(child, Entry):
-                uuid_ref = child.uuid
-            else:
-                uuid_ref = child
-
-            new_children.append(uuid_ref)
-            ref_list.append(child)
-
-        self.children = new_children
-
-        return ref_list
-
-
-@dataclass
-class Root:
-    """Top level structure holding ``Entry``'s.  Denotes the top of the tree"""
-    meta_id: UUID = _root_uuid
-    entries: List[Entry] = field(default_factory=list)
-    tag_groups: TagDef = field(default_factory=dict)
-    meta_pvs: Sequence[Parameter] = field(default_factory=list)
+    pvs: List[PV] = field(default_factory=list)
+    # tags: TagSet = field(default_factory=dict)
+    creation_time: datetime = field(default_factory=utcnow)
+    meta_pvs: List[PV] = field(default_factory=list)
