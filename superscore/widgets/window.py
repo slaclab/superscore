@@ -202,6 +202,9 @@ class Window(QtWidgets.QMainWindow, metaclass=QtSingleton):
             self.main_content_stack.setCurrentWidget(self.pv_browser_page)
             self.navigation_panel.set_nav_button_selected(self.navigation_panel.browse_pvs_button)
 
+            # Fixes TagWidget vertical size allocation
+            self.pv_browser_page.pv_browser_table.resizeRowsToContents()
+
     @QtCore.Slot()
     def open_view_snapshot_page(self) -> None:
         """Open the snapshot page if it is not already open."""
