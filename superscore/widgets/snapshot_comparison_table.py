@@ -6,7 +6,7 @@ import numpy as np
 from qtpy import QtCore, QtGui
 
 import superscore.color
-from superscore.model import Readback, Setpoint
+from superscore.model import PV
 from superscore.widgets import SEVERITY_ICONS
 
 NO_DATA = "--"
@@ -182,7 +182,7 @@ class SnapshotComparisonTableModel(QtCore.QAbstractTableModel):
         self._data = []
         # for each PV in primary snapshot, find partner in secondary snapshot
         pvs = self.client.search(
-            ("entry_type", "eq", (Setpoint, Readback)),
+            ("entry_type", "eq", PV),
             ("ancestor", "eq", self.main_snapshot.uuid),
         )
         seen = set()
@@ -202,7 +202,7 @@ class SnapshotComparisonTableModel(QtCore.QAbstractTableModel):
                 seen.add(secondary.uuid)
         # for each PV in secondary with no partner in primary, add row with 'None' partner
         pvs = self.client.search(
-            ("entry_type", "eq", (Setpoint, Readback)),
+            ("entry_type", "eq", PV),
             ("ancestor", "eq", self.comparison_snapshot.uuid),
         )
         for secondary in pvs:

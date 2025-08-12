@@ -5,7 +5,7 @@ from uuid import UUID
 from qtpy import QtCore, QtGui
 
 import superscore.color
-from superscore.model import Readback, Setpoint, Snapshot
+from superscore.model import PV, Snapshot
 from superscore.widgets import SEVERITY_ICONS
 from superscore.widgets.views import LivePVTableModel
 
@@ -96,63 +96,35 @@ class PVTableModel(LivePVTableModel):
         entry = self._data[index.row()]
         column = PV_HEADER(index.column())
         if role == QtCore.Qt.DisplayRole:
-            if isinstance(entry, Setpoint):
-                if column == PV_HEADER.CHECKBOX:
-                    pass
-                elif column == PV_HEADER.SEVERITY:
-                    return None
-                elif column == PV_HEADER.DEVICE:
-                    return None
-                elif column == PV_HEADER.PV:
-                    return entry.pv_name
-                elif column == PV_HEADER.SETPOINT:
-                    return entry.data
-                elif column == PV_HEADER.LIVE_SETPOINT:
-                    return self._get_live_data_field(entry, 'data')
-                elif column == PV_HEADER.READBACK:
-                    return entry.readback.data if entry.readback else None
-                elif column == PV_HEADER.LIVE_READBACK:
-                    return self._get_live_data_field(entry.readback, 'data') if entry.readback else None
-                elif column == PV_HEADER.CONFIG:
-                    return None
-                else:
-                    return None
+            if column == PV_HEADER.CHECKBOX:
+                pass
+            elif column == PV_HEADER.SEVERITY:
+                return None
+            elif column == PV_HEADER.DEVICE:
+                return None
+            elif column == PV_HEADER.PV:
+                return entry.setpoint
+            elif column == PV_HEADER.SETPOINT:
+                return getattr(entry.setpoint_data, "data", "")
+            elif column == PV_HEADER.LIVE_SETPOINT:
+                return self._get_live_data_field(entry, 'data')
+            elif column == PV_HEADER.READBACK:
+                return getattr(entry.readback_data, "data", "")
+            elif column == PV_HEADER.LIVE_READBACK:
+                return self._get_live_data_field(entry.readback, 'data') if entry.readback else None
+            elif column == PV_HEADER.CONFIG:
+                return None
             else:
-                if column == PV_HEADER.SEVERITY:
-                    return None
-                elif column == PV_HEADER.DEVICE:
-                    return None
-                elif column == PV_HEADER.PV:
-                    return entry.pv_name
-                elif column == PV_HEADER.SETPOINT:
-                    return None
-                elif column == PV_HEADER.LIVE_SETPOINT:
-                    return None
-                elif column == PV_HEADER.READBACK:
-                    return entry.data
-                elif column == PV_HEADER.LIVE_READBACK:
-                    return self._get_live_data_field(entry, 'data')
-                elif column == PV_HEADER.CONFIG:
-                    return None
-                else:
-                    return None
+                return None
         elif role == QtCore.Qt.ToolTipRole:
-            if isinstance(entry, Setpoint):
-                if column == PV_HEADER.SEVERITY:
-                    return entry.pv_name + ".SEVR"
-                elif column in (PV_HEADER.PV, PV_HEADER.SETPOINT, PV_HEADER.LIVE_SETPOINT):
-                    return entry.pv_name
-                elif column in (PV_HEADER.READBACK, PV_HEADER.LIVE_READBACK) and entry.readback is not None:
-                    return entry.readback.pv_name
-                elif column == PV_HEADER.CONFIG:
-                    return None
-            else:
-                if column == PV_HEADER.SEVERITY:
-                    return entry.pv_name + ".SEVR"
-                elif column in (PV_HEADER.READBACK, PV_HEADER.LIVE_READBACK):
-                    return entry.pv_name
-                elif column == PV_HEADER.CONFIG:
-                    return None
+            if column == PV_HEADER.SEVERITY:
+                return entry.setpoint + ".SEVR"
+            elif column in (PV_HEADER.PV, PV_HEADER.SETPOINT, PV_HEADER.LIVE_SETPOINT):
+                return entry.setpoint
+            elif column in (PV_HEADER.READBACK, PV_HEADER.LIVE_READBACK) and entry.readback:
+                return entry.readback
+            elif column == PV_HEADER.CONFIG:
+                return None
         elif role == QtCore.Qt.CheckStateRole and column == PV_HEADER.CHECKBOX:
             return index.row() in self._checked
         elif role == QtCore.Qt.DecorationRole and column == PV_HEADER.SEVERITY:
@@ -192,11 +164,11 @@ class PVTableModel(LivePVTableModel):
         except AttributeError:
             entries = list(self.client.search(
                 ("ancestor", "eq", snapshot),
-                ("entry_type", "eq", (Setpoint, Readback)),
+                ("entry_type", "eq", PV),
             ))
         finally:
             self._data = [
-                entry if isinstance(entry, (Setpoint, Readback)) else list(
+                entry if isinstance(entry, PV) else list(
                     self.client.search(
                         ("uuid", "eq", entry)
                     )
@@ -205,6 +177,6 @@ class PVTableModel(LivePVTableModel):
         self._checked = set()
         self.set_entries(self._data)
 
-    def get_selected_pvs(self) -> Iterable[Setpoint]:
+    def get_selected_pvs(self) -> Iterable[PV]:
         """Return the Setpoints corresponding to checked rows in the table"""
         return [self._data[i] for i in self._checked]

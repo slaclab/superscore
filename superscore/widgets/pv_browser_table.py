@@ -4,7 +4,7 @@ from typing import Any
 
 from qtpy import QtCore
 
-from superscore.model import Parameter
+from superscore.model import PV
 from superscore.type_hints import TagSet
 
 logger = logging.getLogger(__name__)
@@ -36,7 +36,7 @@ class PVBrowserTableModel(QtCore.QAbstractTableModel):
         super().__init__(parent=parent)
         self.client = client
         self._data = list(self.client.search(
-            ("entry_type", "eq", Parameter),
+            ("entry_type", "eq", PV),
         ))
 
     def rowCount(self, _=QtCore.QModelIndex()) -> int:
@@ -69,17 +69,17 @@ class PVBrowserTableModel(QtCore.QAbstractTableModel):
         elif role == QtCore.Qt.ToolTipRole:
             entry = self._data[index.row()]
             if column == PV_BROWSER_HEADER.PV:
-                return entry.pv_name
+                return entry.setpoint
             elif column == PV_BROWSER_HEADER.READBACK and entry.readback is not None:
-                return entry.readback.pv_name
+                return entry.readback
         elif role == QtCore.Qt.DisplayRole:
             entry = self._data[index.row()]
             if column == PV_BROWSER_HEADER.DEVICE:
                 return None
             elif column == PV_BROWSER_HEADER.PV:
-                return entry.pv_name
+                return entry.setpoint
             elif column == PV_BROWSER_HEADER.READBACK:
-                return entry.readback.pv_name if entry.readback else NO_DATA
+                return entry.readback or NO_DATA
             elif column == PV_BROWSER_HEADER.TAGS:
                 return entry.tags if entry.tags else {}
         elif role == QtCore.Qt.UserRole:

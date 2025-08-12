@@ -13,8 +13,7 @@ from qtpy import QtCore, QtWidgets
 from qtpy.QtGui import QCloseEvent
 
 from superscore.client import Client
-from superscore.control_layers._base_shim import EpicsData
-from superscore.model import Parameter, Readback, Setpoint, Snapshot
+from superscore.model import PV, EpicsData, Snapshot
 from superscore.widgets.configure_window import TagGroupsWindow
 from superscore.widgets.core import NameDescTagsWidget, QtSingleton
 from superscore.widgets.date_range import DateRangeWidget
@@ -319,7 +318,7 @@ class Window(QtWidgets.QMainWindow, metaclass=QtSingleton):
         if not index.isValid():
             logger.warning("Invalid index passed to open_pv_details")
             return
-        data: Parameter | Setpoint | Readback
+        data: PV
         if isinstance(index.model(), QtCore.QSortFilterProxyModel):
             source_model = index.model().sourceModel()
             source_index = index.model().mapToSource(index)
@@ -334,11 +333,11 @@ class Window(QtWidgets.QMainWindow, metaclass=QtSingleton):
         epics_data = self.client.cl.get(data.pv_name)
 
         pv_details = PVDetails(
-            pv_name=data.pv_name,
-            readback_name=data.readback.pv_name if getattr(data, "readback", None) else None,
+            pv_name=data.setpoint,
+            readback_name=data.readback,
             description=data.description,
-            tolerance_abs=data.abs_tolerance if isinstance(data, Parameter) else None,
-            tolerance_rel=data.rel_tolerance if isinstance(data, Parameter) else None,
+            tolerance_abs=data.abs_tolerance,
+            tolerance_rel=data.rel_tolerance,
             lolo=epics_data.lower_alarm_limit if isinstance(epics_data, EpicsData) else None,
             low=epics_data.lower_warning_limit if isinstance(epics_data, EpicsData) else None,
             high=epics_data.upper_warning_limit if isinstance(epics_data, EpicsData) else None,
