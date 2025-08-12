@@ -19,6 +19,7 @@ from superscore.model import Parameter, Readback, Setpoint, Snapshot
 from superscore.widgets.configure_window import TagGroupsWindow
 from superscore.widgets.core import NameDescTagsWidget, QtSingleton
 from superscore.widgets.date_range import DateRangeWidget
+from superscore.widgets.filter_bar import FilterBar
 from superscore.widgets.page.page import Page
 from superscore.widgets.page.pv_browser import PVBrowserPage
 from superscore.widgets.page.snapshot_comparison import SnapshotComparisonPage
@@ -120,9 +121,16 @@ class Window(QtWidgets.QMainWindow, metaclass=QtSingleton):
         search_bar.setClearButtonEnabled(True)
         search_bar.addAction(
             qta.icon("fa5s.search"),
-            QtWidgets.QLineEdit.LeadingPosition,
+            QtWidgets.QLineEdit.TrailingPosition,
         )
+        search_bar.setPlaceholderText("Search title...")
         filters_layout.addWidget(search_bar)
+
+        filter_toggle_button = QtWidgets.QPushButton(qta.icon("fa5s.filter"), "Filter  ")
+        filter_toggle_button.setLayoutDirection(QtCore.Qt.RightToLeft)  # Put the filter icon after the button text
+        filter_toggle_button.setToolTip("Show/hide meta pv filters")
+        filter_toggle_button.clicked.connect(self.toggle_filter_popup)
+        filters_layout.addWidget(filter_toggle_button)
 
         spacer = QtWidgets.QSpacerItem(1, 1, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
         filters_layout.addSpacerItem(spacer)
@@ -152,6 +160,23 @@ class Window(QtWidgets.QMainWindow, metaclass=QtSingleton):
 
         search_bar.textEdited.connect(proxy_model.setFilterFixedString)
         date_range.rangeChanged.connect(proxy_model.setDateRange)
+
+        # Set up the filters for the meta pv columns
+        meta_columns = [pv.description for pv in self.client.backend.get_meta_pvs()]
+        self.meta_pv_filter_popup = QtWidgets.QFrame(self)
+        self.meta_pv_filter_popup.setFrameShape(QtWidgets.QFrame.StyledPanel)
+        self.meta_pv_filter_popup.setWindowFlags(QtCore.Qt.Popup)
+        filter_popup_layout = QtWidgets.QVBoxLayout(self.meta_pv_filter_popup)
+        filter_popup_layout.setContentsMargins(10, 10, 10, 10)
+
+        self.meta_pv_filter_bar = FilterBar(meta_columns)
+        filter_popup_layout.addWidget(self.meta_pv_filter_bar)
+
+        self.meta_pv_filter_bar.filters_updated.connect(
+            lambda: proxy_model.setMetaPVFilters(self.meta_pv_filter_bar.get_filters())
+        )
+
+        self.meta_pv_filter_popup.installEventFilter(self)
 
         return view_snapshot_page
 
@@ -195,6 +220,14 @@ class Window(QtWidgets.QMainWindow, metaclass=QtSingleton):
 
         return configure_page
 
+    def eventFilter(self, watched: QtCore.QObject, event: QtCore.QEvent) -> bool:
+        """Event filter for the window for responding to events as needed."""
+        # If the filter popup is open and the user clicks out of it, close it for them
+        if watched is self.meta_pv_filter_popup and event.type() == QtCore.QEvent.MouseButtonPress:
+            if not self.meta_pv_filter_popup.rect().contains(event.pos()):
+                self.meta_pv_filter_popup.hide()
+        return super().eventFilter(watched, event)
+
     @QtCore.Slot()
     def open_pv_browser_page(self) -> None:
         """Open the PV Browser Page if it is not already open."""
@@ -232,6 +265,16 @@ class Window(QtWidgets.QMainWindow, metaclass=QtSingleton):
         # Set new_snapshot in the details page
         new_snapshot = self.snapshot_table.model().sourceModel().index_to_snapshot(index)
         self.open_snapshot(new_snapshot)
+
+    def toggle_filter_popup(self) -> None:
+        """Show or hide the popup that includes the meta pv filters."""
+        if self.meta_pv_filter_popup.isVisible():
+            self.meta_pv_filter_popup.hide()
+        else:
+            button = self.sender()
+            pos = button.mapToGlobal(QtCore.QPoint(0, button.height()))
+            self.meta_pv_filter_popup.move(pos)
+            self.meta_pv_filter_popup.show()
 
     @QtCore.Slot()
     @QtCore.Slot(Snapshot)

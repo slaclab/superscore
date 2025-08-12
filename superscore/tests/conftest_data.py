@@ -365,8 +365,8 @@ def linac_data() -> Root:
 
     all_snapshot.meta_pvs = [
         hxr_pulse_readback,
-        sxr_pulse_readback,
         hxr_edes_readback,
+        sxr_pulse_readback,
         sxr_edes_readback
     ]
 
