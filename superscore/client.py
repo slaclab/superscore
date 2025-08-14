@@ -9,13 +9,15 @@ from uuid import UUID
 
 from superscore.backends import get_backend
 from superscore.backends.core import SearchTerm, SearchTermType, _Backend
-from superscore.compare import DiffItem, EntryDiff, walk_find_diff
 from superscore.control_layers import ControlLayer, EpicsData
 from superscore.control_layers.status import TaskStatus
-from superscore.model import PV, Entry, Snapshot
+from superscore.model import PV, Snapshot
 from superscore.utils import build_abs_path
 
 logger = logging.getLogger(__name__)
+
+
+Entry = Union[PV, Snapshot]
 
 
 class Client:
@@ -189,35 +191,6 @@ class Client:
         """Remove item from backend, depending on backend"""
         # check for references to ``entry`` in other objects?
         self.backend.delete_entry(entry)
-
-    def compare(self, entry_l: Entry, entry_r: Entry) -> EntryDiff:
-        """
-        Compare two entries and return a diff (EntryDiff).
-        Fills ``entry_l`` and ``entry_r`` before calculating the difference
-
-        Parameters
-        ----------
-        entry_l : Entry
-            the original (left-hand) Entry
-        entry_r : Entry
-            the new (right-hand) Entry
-
-        Returns
-        -------
-        EntryDiff
-            An EntryDiff that tracks the two comparison candidates, and a list
-            of DiffItem's
-        """
-        # Handle the most obvious case.
-        if type(entry_l) is not type(entry_r):
-            diffs = DiffItem(original_value=entry_l, new_value=entry_r, path=[])
-            return EntryDiff(original_entry=entry_l, new_entry=entry_r, diffs=[diffs])
-
-        self.fill(entry_l)
-        self.fill(entry_r)
-        diffs = walk_find_diff(entry_l, entry_r)
-
-        return EntryDiff(original_entry=entry_l, new_entry=entry_r, diffs=list(diffs))
 
     def fill(self, entry: Union[Entry, UUID], fill_depth: Optional[int] = None) -> None:
         """
