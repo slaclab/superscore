@@ -6,14 +6,36 @@ Function components are separated from the arg parser to defer heavy imports
 """
 import configparser
 from pathlib import Path
+from typing import Callable, Iterable, Union
 
-from superscore.backends.core import populate_backend
+import superscore.tests.conftest_data
+from superscore.backends import _Backend
 from superscore.bin.demo_parser import DEMO_CONFIG
 from superscore.bin.ui_parser import main as ui_main
 from superscore.client import Client
-from superscore.model import Readback, Setpoint
+from superscore.model import PV
 from superscore.tests.ioc import IOCFactory
 from superscore.utils import build_abs_path
+
+
+def populate_backend(backend: _Backend, sources: Iterable[Union[Callable, str]]) -> None:
+    """
+    Utility for quickly filling test backends with data. Supports a mix of many
+    types of sources:
+    * Roots
+    * Entries
+    * Callables that return Roots or Entries
+    * strings that search for test data callables, but critically not fixtures
+    """
+    for source in sources:
+        if isinstance(source, Callable):
+            data = source()
+        elif isinstance(source, str):
+            func = getattr(superscore.tests.conftest_data, source, False)
+            data = func()
+        else:
+            raise ValueError(f"Unsupported source type: {type(source)}")
+        backend.save_entry(data)
 
 
 def main(*args, db_path=None, **kwargs):
@@ -29,6 +51,6 @@ def main(*args, db_path=None, **kwargs):
     source_names = parser.get("demo", "fixtures").split()
     populate_backend(client.backend, source_names)
     # IOCFactory needs the Entries with data
-    filled = list(client.search(("entry_type", "eq", (Setpoint, Readback))))
+    filled = list(client.search(("entry_type", "eq", PV)))
     with IOCFactory.from_entries(filled, client)(prefix=''):
         ui_main(cfg_path=DEMO_CONFIG)
