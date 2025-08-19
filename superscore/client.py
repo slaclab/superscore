@@ -213,7 +213,7 @@ class Client:
 
         if isinstance(entry, Snapshot):
             new_children = []
-            for child in entry.children:
+            for child in entry.pvs:
                 if isinstance(child, UUID):
                     search_condition = SearchTerm('uuid', 'eq', child)
                     filled_child = list(self.search(search_condition))[0]
@@ -222,7 +222,7 @@ class Client:
                 else:
                     new_children.append(child)
 
-            entry.children = new_children
+            entry.pvs = new_children
 
     def snap(self, dest: Optional[Snapshot] = None) -> Snapshot:
         """
@@ -258,7 +258,7 @@ class Client:
                 value = data[pv.setpoint]
                 edata = self._value_or_default(value)
                 new_entry.setpoint_data = edata
-            snapshot.children.append(new_entry)
+            snapshot.pvs.append(new_entry)
 
         return snapshot
 
@@ -372,7 +372,7 @@ class Client:
             seen.add(entry.uuid)
 
             if isinstance(entry, Snapshot):
-                q.extend(reversed(entry.children))  # preserve execution order
+                q.extend(reversed(entry.pvs))  # preserve execution order
             else:
                 entries.append(entry)
                 if getattr(entry, "readback", None) is not None:

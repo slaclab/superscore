@@ -330,7 +330,7 @@ class Window(QtWidgets.QMainWindow, metaclass=QtSingleton):
 
         # Get data via the client for alarm limits
         epics_data: EpicsData
-        epics_data = self.client.cl.get(data.pv_name)
+        epics_data = self.client.cl.get(data.readback or data.setpoint)
 
         pv_details = PVDetails(
             pv_name=data.setpoint,
