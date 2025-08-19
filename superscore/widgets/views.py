@@ -909,7 +909,7 @@ class LivePVTableModel(BaseTableEntryModel):
 
         self.client = client
         self.poll_period = poll_period
-        self._data_cache = {e.pv_name: None for e in entries}
+        self._data_cache = {e.setpoint: None for e in entries if e.setpoint} | {e.readback: None for e in entries if e.readback}
         self._poll_thread = None
 
         self.start_polling()
@@ -986,7 +986,7 @@ class LivePVTableModel(BaseTableEntryModel):
         """Set the entries for this table, reset data cache"""
         self.layoutAboutToBeChanged.emit()
         self.entries = entries
-        self._data_cache = {e.pv_name: None for e in entries}
+        self._data_cache = {e.setpoint: None for e in entries if e.setpoint} | {e.readback: None for e in entries if e.readback}
         self._poll_thread.data = self._data_cache
         self.dataChanged.emit(
             self.createIndex(0, 0),
@@ -998,7 +998,8 @@ class LivePVTableModel(BaseTableEntryModel):
         """Remove ``entry`` from the table model"""
         super().remove_entry(entry)
         self.layoutAboutToBeChanged.emit()
-        self._data_cache = {e.pv_name: None for e in self.entries}
+        self._data_cache.pop(entry.setpoint, None)
+        self._data_cache.pop(entry.readback, None)
         self._poll_thread.data = self._data_cache
         self.layoutChanged.emit()
 
@@ -1134,7 +1135,7 @@ class LivePVTableModel(BaseTableEntryModel):
         Any
             The data from EpicsData(entry.pv_name).field
         """
-        live_data = self.get_cache_data(entry.pv_name)
+        live_data = self.get_cache_data(entry.setpoint)
         if not isinstance(live_data, EpicsData):
             # Data is probably fetching, return as is
             return live_data
@@ -1152,7 +1153,7 @@ class LivePVTableModel(BaseTableEntryModel):
         Determines if ``data`` is close to the value in the controls system at
         ``entry``.  Returns True if the values are close, False otherwise.
         """
-        e_data = self.get_cache_data(entry.pv_name)
+        e_data = self.get_cache_data(entry.setpoint)
         if not isinstance(e_data, EpicsData):
             # data still fetching, don't compare
             return

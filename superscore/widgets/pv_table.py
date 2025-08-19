@@ -5,7 +5,7 @@ from uuid import UUID
 from qtpy import QtCore, QtGui
 
 import superscore.color
-from superscore.model import PV, Snapshot
+from superscore.model import PV, Severity, Snapshot
 from superscore.widgets import SEVERITY_ICONS
 from superscore.widgets.views import LivePVTableModel
 
@@ -128,9 +128,14 @@ class PVTableModel(LivePVTableModel):
         elif role == QtCore.Qt.CheckStateRole and column == PV_HEADER.CHECKBOX:
             return index.row() in self._checked
         elif role == QtCore.Qt.DecorationRole and column == PV_HEADER.SEVERITY:
-            icon = SEVERITY_ICONS[entry.severity]
+            severity = Severity.INVALID
+            try:
+                severity = entry.setpoint_data.severity
+            except AttributeError:
+                pass
+            icon = SEVERITY_ICONS[severity]
             if icon is None:
-                icon = SEVERITY_ICONS[entry.status]
+                icon = SEVERITY_ICONS[entry.setpoint_data.status]
             return icon
         elif role == QtCore.Qt.ForegroundRole and column in [PV_HEADER.LIVE_SETPOINT, PV_HEADER.LIVE_READBACK]:
             return QtGui.QColor(superscore.color.BLUE)
@@ -160,7 +165,7 @@ class PVTableModel(LivePVTableModel):
 
     def set_snapshot(self, snapshot: Union[UUID, Snapshot]) -> None:
         try:
-            entries = snapshot.children
+            entries = snapshot.pvs
         except AttributeError:
             entries = list(self.client.search(
                 ("ancestor", "eq", snapshot),
