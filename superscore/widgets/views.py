@@ -916,6 +916,7 @@ class LivePVTableModel(BaseTableEntryModel):
 
     def start_polling(self) -> None:
         """Start the polling thread"""
+        """
         if self._poll_thread and self._poll_thread.isRunning():
             return
 
@@ -930,6 +931,8 @@ class LivePVTableModel(BaseTableEntryModel):
         self._poll_thread.finished.connect(self._poll_thread_finished)
 
         self._poll_thread.start()
+        """
+        return
 
     def stop_polling(self, wait_time: float = 0.0) -> None:
         """
@@ -987,7 +990,7 @@ class LivePVTableModel(BaseTableEntryModel):
         self.layoutAboutToBeChanged.emit()
         self.entries = entries
         self._data_cache = {e.setpoint: None for e in entries if e.setpoint} | {e.readback: None for e in entries if e.readback}
-        self._poll_thread.data = self._data_cache
+        # self._poll_thread.data = self._data_cache
         self.dataChanged.emit(
             self.createIndex(0, 0),
             self.createIndex(self.rowCount(), self.columnCount()),
