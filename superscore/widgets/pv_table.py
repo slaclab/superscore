@@ -107,11 +107,13 @@ class PVTableModel(LivePVTableModel):
             elif column == PV_HEADER.SETPOINT:
                 return getattr(entry.setpoint_data, "data", "")
             elif column == PV_HEADER.LIVE_SETPOINT:
-                return self._get_live_data_field(entry, 'data')
+                # return self._get_live_data_field(entry, 'data')
+                return '--'
             elif column == PV_HEADER.READBACK:
                 return getattr(entry.readback_data, "data", "")
             elif column == PV_HEADER.LIVE_READBACK:
-                return self._get_live_data_field(entry.readback, 'data') if entry.readback else None
+                # return self._get_live_data_field(entry.readback, 'data') if entry.readback else None
+                return '--'
             elif column == PV_HEADER.CONFIG:
                 return None
             else:
