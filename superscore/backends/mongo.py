@@ -1,4 +1,5 @@
 import logging
+from datetime import datetime, timedelta
 from typing import Iterable
 
 import requests
@@ -21,6 +22,8 @@ class MongoBackend(_Backend):
     def __init__(self, address: str):
         super().__init__()
         self.address = address
+        self._tag_cache = {}
+        self._last_tag_fetch = datetime.now() - timedelta(minutes=1)
 
     def search(self, *search_terms: SearchTermType):
         entries = []
@@ -46,21 +49,24 @@ class MongoBackend(_Backend):
                     yield entry
 
     def get_tags(self) -> TagDef:
-        tag_def = {}
-        r = requests.get(self.address + ENDPOINTS["TAGS"])
-        logger.debug(f"{r.request.method} {r.url} with response {r.status_code} ({r.reason})")
-        if r.ok:
-            for dct in r.json()["payload"]:
-                idx = dct['id']
-                name = dct['name']
-                r = requests.get(self.address + ENDPOINTS["TAGS"] + f"/{idx}")
-                logger.debug(f"{r.request.method} {r.url} with response {r.status_code} ({r.reason})")
-                if r.ok:
-                    dct = r.json()["payload"][0]
-                    description = dct.get("description", "")
-                    tags = {d["id"]: d["name"] for d in dct["tags"]}
-                    tag_def[idx] = [name, description, tags]
-        return tag_def
+        if datetime.now() - self._last_tag_fetch > timedelta(minutes=1):
+            tag_def = {}
+            r = requests.get(self.address + ENDPOINTS["TAGS"])
+            logger.debug(f"{r.request.method} {r.url} with response {r.status_code} ({r.reason})")
+            if r.ok:
+                for dct in r.json()["payload"]:
+                    idx = dct['id']
+                    name = dct['name']
+                    r = requests.get(self.address + ENDPOINTS["TAGS"] + f"/{idx}")
+                    logger.debug(f"{r.request.method} {r.url} with response {r.status_code} ({r.reason})")
+                    if r.ok:
+                        dct = r.json()["payload"][0]
+                        description = dct.get("description", "")
+                        tags = {d["id"]: d["name"] for d in dct["tags"]}
+                        tag_def[idx] = [name, description, tags]
+            self._tag_cache = tag_def
+            self._last_tag_fetch = datetime.now()
+        return self._tag_cache
 
     def add_tag_group(self, name, description) -> int:
         body = {
