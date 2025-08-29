@@ -14,6 +14,7 @@ logger = logging.getLogger(__name__)
 ENDPOINTS = {
     "TAGS": "/v1/tags",
     "PVS": "/v1/pvs",
+    "PVS_MULTI": "/v1/pvs/multi",
 }
 
 
@@ -152,6 +153,24 @@ class MongoBackend(_Backend):
         self._raise_for_status(r)
         pv_dict = r.json()["payload"]
         return self._unpack_pv(pv_dict)
+
+    def add_multiple_pvs(self, pvs: Iterable[PV]) -> Iterable[PV]:
+        body = []
+        for pv in pvs:
+            body.append(
+                {
+                    "setpointAddress": pv.setpoint,
+                    "description": pv.description,
+                    "absTolerance": pv.abs_tolerance,
+                    "relTolerance": pv.rel_tolerance,
+                    "tags": self._pack_tags(pv.tags),
+                }
+            )
+        r = requests.post(self.address + ENDPOINTS["PVS_MULTI"], json=body)
+        logger.debug(f"{r.request.method} {r.url} with response {r.status_code} ({r.reason})")
+        self._raise_for_status(r)
+        pv_dicts = r.json()["payload"]
+        return [self._unpack_pv(pv_dict) for pv_dict in pv_dicts]
 
     def update_pv(self, pv_id, setpoint="", description="", tags=None, abs_tolerance=None, rel_tolerance=None) -> None:
         body = {}
