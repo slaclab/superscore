@@ -6,7 +6,6 @@ import numpy as np
 from qtpy import QtCore, QtGui
 
 import superscore.color
-from superscore.model import PV
 from superscore.widgets import SEVERITY_ICONS
 
 NO_DATA = "--"
@@ -105,27 +104,33 @@ class SnapshotComparisonTableModel(QtCore.QAbstractTableModel):
         elif role == QtCore.Qt.BackgroundRole:
             if column == COMPARE_HEADER.COMPARE_SETPOINT:
                 try:
-                    is_close = np.isclose(entry.data, compare.data)
+                    is_close = np.isclose(entry.setpoint_data.data, compare.setpoint_data.data)
                 except AttributeError:
                     return None
                 except TypeError:
-                    is_close = entry.data == compare.data
-                if compare.data is not None and not is_close:
+                    is_close = entry.setpoint_data.data == compare.setpoint_data.data
+                if compare.setpoint_data.data is not None and not is_close:
                     return QtGui.QColor(superscore.color.RED)
             elif column == COMPARE_HEADER.COMPARE_READBACK:
                 try:
-                    is_close = np.isclose(entry.readback.data, compare.readback.data)
+                    is_close = np.isclose(entry.readback_data.data, compare.readback_data.data)
                 except TypeError:
-                    is_close = entry.readback.data == compare.readback.data
+                    is_close = entry.readback_data.data == compare.readback_data.data
                 except AttributeError:
                     return None
-                if compare.readback.data is not None and not is_close:
+                if compare.readback_data.data is not None and not is_close:
                     return QtGui.QColor(superscore.color.RED)
         elif role == QtCore.Qt.ToolTipRole:
-            try:
-                return entry.pv_name
-            except AttributeError:
-                return compare.pv_name
+            if column in [COMPARE_HEADER.PV, COMPARE_HEADER.SETPOINT, COMPARE_HEADER.COMPARE_SETPOINT]:
+                try:
+                    return entry.setpoint
+                except AttributeError:
+                    return compare.setpoint
+            elif column in [COMPARE_HEADER.READBACK, COMPARE_HEADER.COMPARE_READBACK]:
+                try:
+                    return entry.readback
+                except AttributeError:
+                    return compare.readback
         elif role == QtCore.Qt.DecorationRole:
             if column in (COMPARE_HEADER.SEVERITY, COMPARE_HEADER.COMPARE_SEVERITY):
                 if entry is None:
@@ -141,17 +146,15 @@ class SnapshotComparisonTableModel(QtCore.QAbstractTableModel):
                     if entry is None:
                         return NO_DATA
                 elif column == COMPARE_HEADER.DEVICE:
-                    # TODO: figure out how to represent a device
                     return NO_DATA
                 elif column == COMPARE_HEADER.PV:
-                    return entry.pv_name if entry else compare.pv_name
+                    return entry.setpoint if entry else compare.setpoint
                 elif column in (COMPARE_HEADER.SETPOINT, COMPARE_HEADER.COMPARE_SETPOINT):
-                    return entry.data
+                    return entry.setpoint_data.data
                 elif column in (COMPARE_HEADER.READBACK, COMPARE_HEADER.COMPARE_READBACK):
-                    return entry.readback.data
+                    return entry.readback_data.data
             except AttributeError:
                 return NO_DATA
-
         # Default case
         return None
 
@@ -180,34 +183,16 @@ class SnapshotComparisonTableModel(QtCore.QAbstractTableModel):
 
         self.beginResetModel()
         self._data = []
+        pvs = self.client.backend.get_snapshots(uuid=self.comparison_snapshot.uuid).pvs
+        secondary_pvs = {(pv.setpoint, pv.readback): pv for pv in tuple(pvs)}
         # for each PV in primary snapshot, find partner in secondary snapshot
-        pvs = self.client.search(
-            ("entry_type", "eq", PV),
-            ("ancestor", "eq", self.main_snapshot.uuid),
-        )
-        seen = set()
+        pvs = self.client.backend.get_snapshots(uuid=self.main_snapshot.uuid).pvs
         for primary in tuple(pvs):
-            secondary_generator = self.client.search(
-                ("pv_name", "eq", primary.pv_name),
-                ("entry_type", "eq", type(primary)),
-                ("ancestor", "eq", self.comparison_snapshot.uuid),
-            )
-            try:
-                secondary = tuple(secondary_generator)[0]  # assumes at most one match
-            except IndexError:
-                secondary = None
-
+            secondary = secondary_pvs.pop((primary.setpoint, primary.readback), None)
             self._data.append((primary, secondary))
-            if secondary:
-                seen.add(secondary.uuid)
         # for each PV in secondary with no partner in primary, add row with 'None' partner
-        pvs = self.client.search(
-            ("entry_type", "eq", PV),
-            ("ancestor", "eq", self.comparison_snapshot.uuid),
-        )
-        for secondary in pvs:
-            if secondary.uuid not in seen:
-                self._data.append((None, secondary))
+        for secondary in secondary_pvs.values():
+            self._data.append((None, secondary))
         self.endResetModel()
 
     def set_main_snapshot(self, main_snapshot: UUID) -> None:
