@@ -1,21 +1,23 @@
 """Client for superscore.  Used for programmatic interactions with superscore"""
 import configparser
+import copy
 import logging
 import os
 from pathlib import Path
-from typing import Any, Dict, Generator, Iterable, List, Optional, Union
+from typing import Any, Generator, Iterable, List, Optional, Union
 from uuid import UUID
 
 from superscore.backends import get_backend
 from superscore.backends.core import SearchTerm, SearchTermType, _Backend
-from superscore.compare import DiffItem, EntryDiff, walk_find_diff
 from superscore.control_layers import ControlLayer, EpicsData
 from superscore.control_layers.status import TaskStatus
-from superscore.model import (Collection, Entry, Nestable, Parameter, Readback,
-                              Setpoint, Snapshot)
+from superscore.model import PV, Snapshot
 from superscore.utils import build_abs_path
 
 logger = logging.getLogger(__name__)
+
+
+Entry = Union[PV, Snapshot]
 
 
 class Client:
@@ -190,39 +192,10 @@ class Client:
         # check for references to ``entry`` in other objects?
         self.backend.delete_entry(entry)
 
-    def compare(self, entry_l: Entry, entry_r: Entry) -> EntryDiff:
-        """
-        Compare two entries and return a diff (EntryDiff).
-        Fills ``entry_l`` and ``entry_r`` before calculating the difference
-
-        Parameters
-        ----------
-        entry_l : Entry
-            the original (left-hand) Entry
-        entry_r : Entry
-            the new (right-hand) Entry
-
-        Returns
-        -------
-        EntryDiff
-            An EntryDiff that tracks the two comparison candidates, and a list
-            of DiffItem's
-        """
-        # Handle the most obvious case.
-        if type(entry_l) is not type(entry_r):
-            diffs = DiffItem(original_value=entry_l, new_value=entry_r, path=[])
-            return EntryDiff(original_entry=entry_l, new_entry=entry_r, diffs=[diffs])
-
-        self.fill(entry_l)
-        self.fill(entry_r)
-        diffs = walk_find_diff(entry_l, entry_r)
-
-        return EntryDiff(original_entry=entry_l, new_entry=entry_r, diffs=list(diffs))
-
     def fill(self, entry: Union[Entry, UUID], fill_depth: Optional[int] = None) -> None:
         """
         Walk through ``entry`` and replace UUIDs with corresponding Entry's.
-        Does nothing if ``entry`` is a non-Nestable or UUID.
+        Does nothing if ``entry`` is a PV or UUID.
         Filling happens "in-place", modifying ``entry``.
 
         Parameters
@@ -238,9 +211,9 @@ class Client:
             if fill_depth <= 0:
                 return
 
-        if isinstance(entry, Nestable):
+        if isinstance(entry, Snapshot):
             new_children = []
-            for child in entry.children:
+            for child in entry.pvs:
                 if isinstance(child, UUID):
                     search_condition = SearchTerm('uuid', 'eq', child)
                     filled_child = list(self.search(search_condition))[0]
@@ -249,7 +222,7 @@ class Client:
                 else:
                     new_children.append(child)
 
-            entry.children = new_children
+            entry.pvs = new_children
 
     def snap(self, dest: Optional[Snapshot] = None) -> Snapshot:
         """
@@ -258,84 +231,40 @@ class Client:
 
         Parameters
         ----------
-        entry : Collection
-            the Collection to save
+        entry : Snapshot
+            an unfilled Snapshot to fill with data
 
         Returns
         -------
         Snapshot
-            a Snapshot corresponding to the input Collection
         """
         logger.debug("Saving Snapshot")
-        pvs = list(self.search(("entry_type", "eq", Parameter)))
-        readback_pvs = [pv.readback for pv in pvs if getattr(pv, "readback", None)]
+        pvs = self.backend.get_all_pvs()
         meta_pvs = self.backend.get_meta_pvs()
-        all_pvs = pvs + readback_pvs + meta_pvs
-        values = self.cl.get([pv.pv_name for pv in all_pvs])
-        data = {pv.pv_name: value for pv, value in zip(all_pvs, values)}
+        all_pvs = pvs + meta_pvs
+        all_addresses = [pv.setpoint for pv in all_pvs if pv.setpoint] + [pv.readback for pv in all_pvs if pv.readback]
+        values = self.cl.get(all_addresses)
+        data = {pv_address: value for pv_address, value in zip(all_addresses, values)}
 
         snapshot = dest or Snapshot()
 
-        for pv in pvs:
-            if pv.readback is not None:
-                value = data[pv.readback.pv_name]
+        for pv in all_pvs:
+            new_entry = copy.copy(pv)
+            if pv.readback:
+                value = data[pv.readback]
                 edata = self._value_or_default(value)
-                readback = Readback.from_parameter(
-                    pv.readback,
-                    data=edata.data,
-                    status=edata.status,
-                    severity=edata.severity,
-                )
-                readback_pvs.remove(pv.readback)
-            else:
-                readback = None
-
-            value = data[pv.pv_name]
-            edata = self._value_or_default(value)
-            if pv.read_only:
-                new_entry = Readback.from_parameter(
-                    pv,
-                    data=edata.data,
-                    status=edata.status,
-                    severity=edata.severity,
-                )
-            else:
-                new_entry = Setpoint.from_parameter(
-                    pv,
-                    data=edata.data,
-                    status=edata.status,
-                    severity=edata.severity,
-                    readback=readback,
-                )
-            snapshot.children.append(new_entry)
-
-        for pv in readback_pvs:
-            value = data[pv.pv_name]
-            edata = self._value_or_default(value)
-            new_entry = Readback.from_parameter(
-                pv,
-                data=edata.data,
-                status=edata.status,
-                severity=edata.severity,
-            )
-            snapshot.children.append(new_entry)
-
-        for pv in meta_pvs:
-            value = data[pv.pv_name]
-            edata = self._value_or_default(value)
-            new_entry = Readback.from_parameter(
-                pv,
-                data=edata.data,
-                status=edata.status,
-                severity=edata.severity,
-            )
-            snapshot.meta_pvs.append(new_entry)
+                new_entry.readback_data = edata
+            if pv.setpoint:
+                value = data[pv.setpoint]
+                edata = self._value_or_default(value)
+                new_entry.setpoint_data = edata
+            snapshot.pvs.append(new_entry)
 
         return snapshot
 
     def apply(
         self,
-        entry: Union[Setpoint, Snapshot],
+        entry: Union[PV, Snapshot],
         sequential: bool = False
     ) -> Optional[List[TaskStatus]]:
         """
@@ -345,7 +274,7 @@ class Client:
 
         Parameters
         ----------
-        entry : Union[Setpoint, Snapshot]
+        entry : Union[PV, Snapshot]
             The entry to apply values from
         sequential : bool, optional
             Whether to apply values sequentially, by default False
@@ -355,12 +284,12 @@ class Client:
         Optional[List[TaskStatus]]
             TaskStatus(es) for each value applied.
         """
-        if not isinstance(entry, (Setpoint, Snapshot)):
-            logger.info("Entries must be a Snapshot or Setpoint")
+        if not isinstance(entry, (PV, Snapshot)):
+            logger.info("Entries must be a Snapshot or PV")
             return
 
-        if isinstance(entry, Setpoint):
-            return [self.cl.put(entry.pv_name, entry.data)]
+        if isinstance(entry, PV):
+            return [self.cl.put(entry.setpoint, entry.setpoint_data)]
 
         # Gather pv-value list and apply at once
         status_list = []
@@ -377,29 +306,6 @@ class Client:
                 status_list.append(status)
         else:
             return self.cl.put(pv_list, data_list)
-
-    def find_origin_collection(self, entry: Union[Collection, Snapshot]) -> Collection:
-        """
-        Return the Collection instance associated with an entry.  The entry can
-        be a Collection or Snapshot.
-
-        Raises
-        ------
-        ValueError
-            If snapshot does not record an origin collection
-        EntryNotFoundError
-            From _Backend.get_entry
-        """
-        if isinstance(entry, Collection):
-            return entry
-        elif isinstance(entry, Snapshot):
-            origin = entry.origin_collection
-            if origin is None:
-                raise ValueError(f"{entry.title} ({entry.uuid}) does not have an origin collection)")
-            elif isinstance(origin, UUID):
-                return self.backend.get_entry(origin)
-            else:
-                return origin
 
     def _gather_data(
         self,
@@ -426,12 +332,13 @@ class Client:
         pv_list = []
         data_list = []
         for entry in entries:
-            if isinstance(entry, Readback) and writable_only:
-                pass
-            else:  # entry is Parameter, Setpoint, or Readback
-                pv_list.append(entry.pv_name)
-                if hasattr(entry, "data"):
-                    data_list.append(entry.data)
+            pv_list.append(entry.setpoint)
+            if entry.setpoint_data:
+                data_list.append(entry.setpoint_data)
+            if not writable_only:
+                pv_list.append(entry.readback)
+                if entry.readback_data:
+                    data_list.append(entry.readback_data)
         return pv_list, data_list
 
     def _gather_leaves(
@@ -464,98 +371,13 @@ class Client:
                 entry = self.backend.get_entry(entry)
             seen.add(entry.uuid)
 
-            if isinstance(entry, Nestable):
-                q.extend(reversed(entry.children))  # preserve execution order
-            else:  # entry is Parameter, Setpoint, or Readback
+            if isinstance(entry, Snapshot):
+                q.extend(reversed(entry.pvs))  # preserve execution order
+            else:
                 entries.append(entry)
                 if getattr(entry, "readback", None) is not None:
                     q.append(entry.readback)
         return entries
-
-    def _build_snapshot(
-        self,
-        coll: Collection,
-        values: Dict[str, EpicsData],
-        dest: Optional[Snapshot] = None,
-    ) -> Snapshot:
-        """
-        Traverse a Collection, assembling a Snapshot using pre-fetched data
-        along the way
-
-        Parameters
-        ----------
-        coll : Collection
-            The collection being saved
-        values : Dict[str, EpicsData]
-            A dictionary mapping PV names to pre-fetched values
-
-        Returns
-        -------
-        Snapshot
-            A Snapshot corresponding to the input Collection
-        """
-        snapshot = dest or Snapshot(
-            title=coll.title,
-            tags=coll.tags.copy(),
-        )
-        snapshot.origin_collection = coll
-
-        for child in coll.children:
-            if isinstance(child, UUID):
-                child = self.backend.get_entry(child)
-            if isinstance(child, Parameter):
-                if child.readback is not None:
-                    edata = self._value_or_default(
-                        values.get(child.readback.pv_name, None)
-                    )
-                    readback = Readback(
-                        pv_name=child.readback.pv_name,
-                        description=child.readback.description,
-                        data=edata.data,
-                        status=edata.status,
-                        severity=edata.severity,
-                        rel_tolerance=child.readback.rel_tolerance,
-                        abs_tolerance=child.readback.abs_tolerance,
-                    )
-                else:
-                    readback = None
-                edata = self._value_or_default(values.get(child.pv_name, None))
-                if child.read_only:
-                    # create a readback and propagate tolerances
-                    new_entry = Readback(
-                        pv_name=child.pv_name,
-                        description=child.description,
-                        data=edata.data,
-                        status=edata.status,
-                        severity=edata.severity,
-                        rel_tolerance=child.rel_tolerance,
-                        abs_tolerance=child.abs_tolerance,
-                    )
-                else:
-                    new_entry = Setpoint(
-                        pv_name=child.pv_name,
-                        description=child.description,
-                        data=edata.data,
-                        status=edata.status,
-                        severity=edata.severity,
-                        readback=readback
-                    )
-                snapshot.children.append(new_entry)
-            elif isinstance(child, Collection):
-                snapshot.children.append(self._build_snapshot(child, values))
-
-        snapshot.meta_pvs = []
-        for pv in self.backend.get_meta_pvs():
-            edata = self._value_or_default(values.get(pv, None))
-            readback = Readback(
-                pv_name=pv,
-                data=edata.data,
-                status=edata.status,
-                severity=edata.severity,
-            )
-            snapshot.meta_pvs.append(readback)
-
-        return snapshot
 
     def _value_or_default(self, value: Any) -> EpicsData:
         """small helper for ensuring value is an EpicsData instance"""

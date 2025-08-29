@@ -9,12 +9,13 @@ from functools import partial
 from typing import Optional
 
 import qtawesome as qta
+from epicscorelibs.ca.cadef import CAException
 from qtpy import QtCore, QtWidgets
 from qtpy.QtGui import QCloseEvent
 
 from superscore.client import Client
-from superscore.control_layers._base_shim import EpicsData
-from superscore.model import Parameter, Readback, Setpoint, Snapshot
+from superscore.model import PV, EpicsData, Snapshot
+from superscore.permission_manager import PermissionManager
 from superscore.widgets.configure_window import TagGroupsWindow
 from superscore.widgets.core import NameDescTagsWidget, QtSingleton
 from superscore.widgets.date_range import DateRangeWidget
@@ -23,7 +24,9 @@ from superscore.widgets.page.page import Page
 from superscore.widgets.page.pv_browser import PVBrowserPage
 from superscore.widgets.page.snapshot_comparison import SnapshotComparisonPage
 from superscore.widgets.page.snapshot_details import SnapshotDetailsPage
-from superscore.widgets.pv_details_components import PVDetails, PVDetailsPopup
+from superscore.widgets.pv_details_components import (PVDetails,
+                                                      PVDetailsPopup,
+                                                      PVDetailsPopupEditable)
 from superscore.widgets.pv_table import PVTableModel
 from superscore.widgets.snapshot_table import (SnapshotFilterModel,
                                                SnapshotTableModel)
@@ -47,6 +50,8 @@ class Window(QtWidgets.QMainWindow, metaclass=QtSingleton):
             self.client = Client.from_config()
         self.pages: set[Page] = set()
         self.setup_ui()
+
+        self.permission_manager = PermissionManager.get_instance()
 
     def setup_ui(self) -> None:
         self.navigation_panel = self.init_nav_panel()
@@ -194,8 +199,8 @@ class Window(QtWidgets.QMainWindow, metaclass=QtSingleton):
     def init_pv_browser_page(self) -> PVBrowserPage:
         """Initialize the PV browser page with the PV browser table."""
         pv_browser_page = PVBrowserPage(self.client, self)
-        pv_browser_page.open_details_signal.connect(self.open_pv_details)
-
+        pv_browser_page.sigOpenPVDetails.connect(self.open_pv_editor)
+        pv_browser_page.sigAddPV.connect(self.open_new_pv_dialog)
         return pv_browser_page
 
     def init_configure_page(self) -> QtWidgets.QWidget:
@@ -286,7 +291,7 @@ class Window(QtWidgets.QMainWindow, metaclass=QtSingleton):
         dest_snapshot = Snapshot()
         dialog = self.metadata_dialog(dest_snapshot)
         dialog.accepted.connect(partial(self.client.snap, dest=dest_snapshot))
-        dialog.accepted.connect(partial(self.client.save, dest_snapshot))
+        dialog.accepted.connect(partial(self.client.backend.add_snapshot, dest_snapshot))
         dialog.accepted.connect(partial(self.open_snapshot, dest_snapshot))
         dialog.accepted.connect(self.snapshot_table.model().sourceModel().fetch)
 
@@ -315,11 +320,20 @@ class Window(QtWidgets.QMainWindow, metaclass=QtSingleton):
         self.main_content_stack.setCurrentWidget(self.comparison_page)
 
     @QtCore.Slot(QtCore.QModelIndex, QtWidgets.QAbstractItemView)
-    def open_pv_details(self, index: QtCore.QModelIndex, view: QtWidgets.QAbstractItemView) -> None:
+    def open_pv_editor(self, index: QtCore.QModelIndex, view: QtWidgets.QAbstractItemView):
+        self.open_pv_details(index, view, editable=self.permission_manager.is_admin())
+
+    @QtCore.Slot(QtCore.QModelIndex, QtWidgets.QAbstractItemView)
+    def open_pv_details(
+        self,
+        index: QtCore.QModelIndex,
+        view: QtWidgets.QAbstractItemView,
+        editable=False,
+    ) -> None:
         if not index.isValid():
             logger.warning("Invalid index passed to open_pv_details")
             return
-        data: Parameter | Setpoint | Readback
+        data: PV
         if isinstance(index.model(), QtCore.QSortFilterProxyModel):
             source_model = index.model().sourceModel()
             source_index = index.model().mapToSource(index)
@@ -330,30 +344,78 @@ class Window(QtWidgets.QMainWindow, metaclass=QtSingleton):
             raise TypeError("Invalid model type passed to open_pv_details")
 
         # Get data via the client for alarm limits
-        epics_data: EpicsData
-        epics_data = self.client.cl.get(data.pv_name)
+        epics_data: EpicsData = None
+        try:
+            epics_data = self.client.cl.get(data.pv_name)
+        except CAException as e:
+            logging.exception(e)
 
         pv_details = PVDetails(
-            pv_name=data.pv_name,
-            readback_name=data.readback.pv_name if getattr(data, "readback", None) else None,
+            pv_name=data.setpoint,
+            readback_name=data.readback,
             description=data.description,
-            tolerance_abs=data.abs_tolerance if isinstance(data, Parameter) else None,
-            tolerance_rel=data.rel_tolerance if isinstance(data, Parameter) else None,
+            tolerance_abs=data.abs_tolerance,
+            tolerance_rel=data.rel_tolerance,
             lolo=epics_data.lower_alarm_limit if isinstance(epics_data, EpicsData) else None,
             low=epics_data.lower_warning_limit if isinstance(epics_data, EpicsData) else None,
             high=epics_data.upper_warning_limit if isinstance(epics_data, EpicsData) else None,
             hihi=epics_data.upper_alarm_limit if isinstance(epics_data, EpicsData) else None,
             tags=data.tags,
         )
-        self.popup = PVDetailsPopup(tag_groups=self.client.backend.get_tags(), pv_details=pv_details)
+        popup_class = PVDetailsPopupEditable if editable else PVDetailsPopup
+        self.popup = popup_class(
+            tag_groups=self.client.backend.get_tags(),
+            pv_details=pv_details,
+            pv_id=data.uuid
+        )
+        if editable:
+            self.popup.accepted.connect(self.update_pv)
+            self.popup.accepted.connect(lambda: view.model().sourceModel().refetch_row(index.row()))
         self.popup.adjustSize()
 
         table_top_right = view.mapToGlobal(view.rect().topRight())
-
         x = table_top_right.x() - self.popup.width()
         y = table_top_right.y()
-
         self.popup.move(x, y)
+
+        self.popup.show()
+
+    @QtCore.Slot()
+    def update_pv(self):
+        pv_id = self.sender().pv_id
+        pv_details = self.sender().pv_details
+        self.client.backend.update_pv(
+            pv_id,
+            pv_name=pv_details.pv_name,
+            description=pv_details.description,
+            tags=pv_details.tags,
+            abs_tolerance=pv_details.tolerance_abs,
+            rel_tolerance=pv_details.tolerance_rel,
+        )
+
+    @QtCore.Slot(QtWidgets.QAbstractItemView)
+    def open_new_pv_dialog(self) -> None:
+        self.popup = PVDetailsPopupEditable(
+            tag_groups=self.client.backend.get_tags(),
+        )
+        self.popup.adjustSize()
+
+        def add_pv():
+            try:
+                pv = self.client.backend.add_pv(
+                    self.popup.pv_details.pv_name or None,
+                    self.popup.pv_details.readback_name or None,
+                    self.popup.pv_details.description,
+                    abs_tolerance=self.popup.pv_details.tolerance_abs,
+                    rel_tolerance=self.popup.pv_details.tolerance_rel,
+                    tags=self.popup.pv_details.tags,
+                )
+            except Exception as e:
+                logger.exception(e)
+            else:
+                self.pv_browser_page.pv_browser_table.model().sourceModel().add_pv(pv)
+
+        self.popup.accepted.connect(add_pv)
         self.popup.show()
 
     def closeEvent(self, a0: QCloseEvent) -> None:
@@ -402,7 +464,7 @@ class NavigationPanel(QtWidgets.QWidget):
             QPushButton[icon-only="true"] {
                 text-align: center;
             }
-        """
+            """
         )
 
         self.expanded = True

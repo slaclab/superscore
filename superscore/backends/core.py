@@ -3,11 +3,10 @@ Base superscore data storage backend interface
 """
 import re
 from collections.abc import Container, Generator
-from typing import Callable, Iterable, NamedTuple, Sequence, Union
+from typing import NamedTuple, Sequence, Union
 from uuid import UUID
 
-import superscore.tests.conftest_data
-from superscore.model import Entry, Parameter, Root
+from superscore.model import PV, Snapshot
 from superscore.type_hints import AnyEpicsType, TagDef
 
 SearchTermValue = Union[AnyEpicsType, Container[AnyEpicsType], tuple[AnyEpicsType, ...]]
@@ -18,6 +17,9 @@ class SearchTerm(NamedTuple):
     attr: str
     operator: str
     value: SearchTermValue
+
+
+Entry = Union[PV, Snapshot]
 
 
 class _Backend:
@@ -110,7 +112,7 @@ class _Backend:
             raise ValueError(f"SearchTerm does not support operator \"{op}\"")
 
     @property
-    def root(self) -> Root:
+    def root(self):
         """Return the Root Entry in this backend"""
         raise NotImplementedError
 
@@ -126,39 +128,10 @@ class _Backend:
         """Set the definition of valid entry tags"""
         raise NotImplementedError
 
-    def get_meta_pvs(self) -> Sequence[Parameter]:
+    def get_meta_pvs(self) -> Sequence[PV]:
         """Return the PVs used as Snapshot metadata"""
         raise NotImplementedError
 
-    def set_meta_pvs(self, meta_pvs: Sequence[Parameter]) -> None:
+    def set_meta_pvs(self, meta_pvs: Sequence[PV]) -> None:
         """Set the PVs used as Snapshot metadata"""
         raise NotImplementedError
-
-
-def populate_backend(backend: _Backend, sources: Iterable[Union[Callable, str, Root, Entry]]) -> None:
-    """
-    Utility for quickly filling test backends with data. Supports a mix of many
-    types of sources:
-    * Roots
-    * Entries
-    * Callables that return Roots or Entries
-    * strings that search for test data callables, but critically not fixtures
-    """
-    for source in sources:
-        if isinstance(source, Callable):
-            data = source()
-        elif isinstance(source, str):
-            func = getattr(superscore.tests.conftest_data, source, False)
-            data = func()
-        elif isinstance(source, (Root, Entry)):
-            data = source
-        else:
-            raise ValueError(f"Unsupported source type: {type(source)}")
-
-        if isinstance(data, Root):
-            for entry in data.entries:
-                backend.save_entry(entry)
-            backend.set_tags(data.tag_groups)
-            backend.set_meta_pvs(data.meta_pvs)
-        else:
-            backend.save_entry(data)

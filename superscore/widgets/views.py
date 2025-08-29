@@ -14,23 +14,19 @@ from uuid import UUID
 from weakref import WeakValueDictionary
 
 import numpy as np
-import qtawesome as qta
 from qtpy import QtCore, QtGui, QtWidgets
 
 from superscore.backends.core import SearchTerm
 from superscore.client import Client
-from superscore.control_layers import EpicsData
 from superscore.errors import EntryNotFoundError
-from superscore.model import (Collection, Entry, Nestable, Parameter, Readback,
-                              Root, Setpoint, Severity, Snapshot, Status)
+from superscore.model import PV, EpicsData, Severity, Snapshot, Status
 from superscore.qt_helpers import QDataclassBridge
-from superscore.widgets import ICON_MAP, get_window
+from superscore.widgets import get_window
 from superscore.widgets.core import QtSingleton, WindowLinker
 
 logger = logging.getLogger(__name__)
 
-
-PVEntry = Union[Parameter, Setpoint, Readback]
+Entry = Union[PV, Snapshot]
 
 
 def add_open_page_to_menu(
@@ -178,7 +174,7 @@ class EntryItem:
             search_results = client.search(SearchTerm('uuid', 'eq', self._data))
             self._data = list(search_results)[0]
 
-        if isinstance(self._data, Nestable):
+        if isinstance(self._data, Snapshot):
             if any(isinstance(child, UUID) for child in self._data.children):
                 client.fill(self._data, fill_depth=fill_depth)
 
@@ -211,7 +207,7 @@ class EntryItem:
             return '<root>'
 
         if column == 0:
-            if isinstance(self._data, Nestable):
+            if isinstance(self._data, Snapshot):
                 return getattr(self._data, 'title', 'root')
             else:
                 return getattr(self._data, 'pv_name', '<no pv>')
@@ -319,16 +315,9 @@ class EntryItem:
 
         return children
 
-    def icon(self):
-        """return icon for this item"""
-        icon_id = ICON_MAP.get(type(self._data), None)
-        if icon_id is None:
-            return
-        return qta.icon(icon_id)
-
 
 def build_tree(
-    entry: Union[Entry, Root, UUID],
+    entry: Union[Entry, UUID],
     parent: Optional[EntryItem] = None
 ) -> EntryItem:
     """
@@ -353,10 +342,7 @@ def build_tree(
     # view know that there are children in the item (that will later be filled)
 
     item = EntryItem(entry, tree_parent=parent)
-    if isinstance(entry, Root):
-        for child in entry.entries:
-            build_tree(child, parent=item)
-    elif isinstance(entry, Nestable):
+    if isinstance(entry, Snapshot):
         for child in entry.children:
             build_tree(child, parent=item)
 
@@ -586,7 +572,7 @@ class RootTree(QtCore.QAbstractItemModel):
         # Root should never need to be fetched, since we fill to depth
         # of 2 when we initialize the tree, and root is always at depth 0 if
         # present
-        if isinstance(data, Nestable):
+        if isinstance(data, Snapshot):
             if (
                 any(isinstance(dc_child, UUID) for dc_child in data.children)
                 or any(isinstance(ei_child._data, UUID) for ei_child
@@ -658,7 +644,7 @@ class RootTreeView(QtWidgets.QTreeView, WindowLinker):
 
     def set_data(self, data: Any):
         """Set the data for this view, re-setup ui"""
-        if not isinstance(data, (Root, Entry)):
+        if not isinstance(data, Entry):
             raise ValueError(
                 f"Attempted to set an incompatable data type ({type(data)})"
             )
@@ -868,13 +854,6 @@ class BaseTableEntryModel(QtCore.QAbstractTableModel):
                          "not found in table, could not remove.")
         self.layoutChanged.emit()
 
-    def icon(self, entry: Entry) -> Optional[QtGui.QIcon]:
-        """return icon for this ``entry``"""
-        icon_id = ICON_MAP.get(type(entry), None)
-        if icon_id is None:
-            return
-        return qta.icon(icon_id)
-
 
 class DisplayType(Enum):
     """type of data displayed in tables"""
@@ -916,7 +895,7 @@ class LivePVTableModel(BaseTableEntryModel):
         self,
         *args,
         client: Client,
-        entries: Optional[List[PVEntry]] = None,
+        entries: Optional[List[PV]] = None,
         poll_period: float = 1.0,
         **kwargs
     ) -> None:
@@ -930,13 +909,14 @@ class LivePVTableModel(BaseTableEntryModel):
 
         self.client = client
         self.poll_period = poll_period
-        self._data_cache = {e.pv_name: None for e in entries}
+        self._data_cache = {e.setpoint: None for e in entries if e.setpoint} | {e.readback: None for e in entries if e.readback}
         self._poll_thread = None
 
         self.start_polling()
 
     def start_polling(self) -> None:
         """Start the polling thread"""
+        """
         if self._poll_thread and self._poll_thread.isRunning():
             return
 
@@ -951,6 +931,8 @@ class LivePVTableModel(BaseTableEntryModel):
         self._poll_thread.finished.connect(self._poll_thread_finished)
 
         self._poll_thread.start()
+        """
+        return
 
     def stop_polling(self, wait_time: float = 0.0) -> None:
         """
@@ -1003,40 +985,41 @@ class LivePVTableModel(BaseTableEntryModel):
                 self.createIndex(row, self.columnCount()),
             )
 
-    def set_entries(self, entries: list[PVEntry]) -> None:
+    def set_entries(self, entries: list[PV]) -> None:
         """Set the entries for this table, reset data cache"""
         self.layoutAboutToBeChanged.emit()
         self.entries = entries
-        self._data_cache = {e.pv_name: None for e in entries}
-        self._poll_thread.data = self._data_cache
+        self._data_cache = {e.setpoint: None for e in entries if e.setpoint} | {e.readback: None for e in entries if e.readback}
+        # self._poll_thread.data = self._data_cache
         self.dataChanged.emit(
             self.createIndex(0, 0),
             self.createIndex(self.rowCount(), self.columnCount()),
         )
         self.layoutChanged.emit()
 
-    def remove_entry(self, entry: PVEntry) -> None:
+    def remove_entry(self, entry: PV) -> None:
         """Remove ``entry`` from the table model"""
         super().remove_entry(entry)
         self.layoutAboutToBeChanged.emit()
-        self._data_cache = {e.pv_name: None for e in self.entries}
+        self._data_cache.pop(entry.setpoint, None)
+        self._data_cache.pop(entry.readback, None)
         self._poll_thread.data = self._data_cache
         self.layoutChanged.emit()
 
     def index_from_item(
         self,
-        item: PVEntry,
+        item: PV,
         column: Union[str, int]
     ) -> QtCore.QModelIndex:
         """
-        Create an index given a `PVEntry` and desired column.
+        Create an index given a `PV` and desired column.
         The column name must be an option in `LivePVHeaderEnum`, or able to be
         converted to one by swapping ' ' with '_'
 
         Parameters
         ----------
-        item : PVEntry
-            A PVEntry dataclass instance
+        item : PV
+            A PV dataclass instance
         column : Union[str, int]
             A column name or column index
 
@@ -1072,7 +1055,7 @@ class LivePVTableModel(BaseTableEntryModel):
         Any
             the requested data
         """
-        entry: PVEntry = self.entries[index.row()]
+        entry: PV = self.entries[index.row()]
         if isinstance(entry, UUID):
             entry = self.client.backend.get_entry(self.entries[index.row()])
             self.entries[index.row()] = entry
@@ -1139,13 +1122,13 @@ class LivePVTableModel(BaseTableEntryModel):
         # if nothing is found, return invalid QVariant
         return QtCore.QVariant()
 
-    def _get_live_data_field(self, entry: PVEntry, field: str) -> Any:
+    def _get_live_data_field(self, entry: PV, field: str) -> Any:
         """
         Helper to get field from data cache
 
         Parameters
         ----------
-        entry : PVEntry
+        entry : PV
             The Entry to get data from
         field : str
             The field in the EpicsData to fetch (data, status, severity, timestamp)
@@ -1155,7 +1138,7 @@ class LivePVTableModel(BaseTableEntryModel):
         Any
             The data from EpicsData(entry.pv_name).field
         """
-        live_data = self.get_cache_data(entry.pv_name)
+        live_data = self.get_cache_data(entry.setpoint)
         if not isinstance(live_data, EpicsData):
             # Data is probably fetching, return as is
             return live_data
@@ -1168,12 +1151,12 @@ class LivePVTableModel(BaseTableEntryModel):
         else:
             return data_field
 
-    def is_close(self, entry: PVEntry, data: Any) -> bool:
+    def is_close(self, entry: PV, data: Any) -> bool:
         """
         Determines if ``data`` is close to the value in the controls system at
         ``entry``.  Returns True if the values are close, False otherwise.
         """
-        e_data = self.get_cache_data(entry.pv_name)
+        e_data = self.get_cache_data(entry.setpoint)
         if not isinstance(e_data, EpicsData):
             # data still fetching, don't compare
             return
@@ -1355,7 +1338,7 @@ class BaseDataTableView(QtWidgets.QTableView, WindowLinker):
 
         if isinstance(self.data, list):
             self.data.remove(entry)
-        elif isinstance(self.data, Nestable):
+        elif isinstance(self.data, Snapshot):
             self.data.children.remove(entry)
         # edit data held by widget
         self.data_updated.emit()
@@ -1500,7 +1483,7 @@ class LivePVTableView(BaseDataTableView):
         if isinstance(self.data, UUID):
             self.data = self.client.backend.get_entry(self.data)
 
-        if isinstance(self.data, Nestable):
+        if isinstance(self.data, Snapshot):
             # gather sub_nestables
             self.sub_entries = []
             for i, child in enumerate(self.data.children):
@@ -1514,10 +1497,10 @@ class LivePVTableView(BaseDataTableView):
                     raise EntryNotFoundError(f"{child} not found in backend, "
                                              "cannot fill with real data")
 
-                if not isinstance(child, Nestable) and isinstance(child, Entry):
+                if not isinstance(child, Snapshot) and isinstance(child, Entry):
                     self.sub_entries.append(child)
 
-        elif isinstance(self.data, (Parameter, Setpoint, Readback)):
+        elif isinstance(self.data, PV):
             self.sub_entries = [self.data]
 
     @BaseDataTableView.client.setter
@@ -1557,7 +1540,7 @@ class NestableTableModel(BaseTableEntryModel):
         self,
         *args,
         client: Optional[Client] = None,
-        entries: Optional[List[Union[Snapshot, Collection]]] = None,
+        entries: Optional[List[Snapshot]] = None,
         **kwargs
     ) -> None:
         super().__init__(*args, entries=entries, **kwargs)
@@ -1613,7 +1596,7 @@ class NestableTableView(BaseDataTableView):
         if isinstance(self.data, UUID):
             self.data = self.client.backend.get_entry(self.data)
 
-        if isinstance(self.data, Nestable):
+        if isinstance(self.data, Snapshot):
             # gather sub_nestables
             for i, child in enumerate(self.data.children):
                 if isinstance(child, UUID):
@@ -1626,7 +1609,7 @@ class NestableTableView(BaseDataTableView):
                     raise EntryNotFoundError(f"{child} not found in backend, "
                                              "cannot fill with real data")
 
-                if isinstance(child, Nestable) and isinstance(child, Entry):
+                if isinstance(child, Snapshot) and isinstance(child, Entry):
                     self.sub_entries.append(child)
 
 
