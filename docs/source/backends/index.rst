@@ -1,8 +1,8 @@
 ========
 Backends
 ========
+.. automodule:: superscore.backends.core
+   :members:
 
-.. toctree::
-   :maxdepth: 1
-
-   backends.rst
+.. automodule:: superscore.backends.directory
+   :members:
