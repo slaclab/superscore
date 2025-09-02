@@ -10,8 +10,5 @@
 .. automodule:: superscore.widgets.pv_browser_table
    :members:
 
-.. automodule:: superscore.widgets.squirrel_table
-   :members:
-
 .. automodule:: superscore.widgets.squirrel_table_view
    :members:

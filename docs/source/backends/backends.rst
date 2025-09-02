@@ -1,6 +1,5 @@
-.. automodule:: superscore.widgets.core
+.. automodule:: superscore.backends.core
    :members:
 
-.. automodule:: superscore.widgets.directory
+.. automodule:: superscore.backends.directory
    :members:
-    :show-inheritance:
