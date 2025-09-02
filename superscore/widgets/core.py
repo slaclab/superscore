@@ -185,6 +185,7 @@ class QtSingleton(type(QtCore.QObject), type):
     To use this, specify `QtSingleton` as a metaclass:
 
     .. code-block:: python
+
         class SingletonClass(QtCore.QObject, metaclass=QtSingleton):
             shared_signal: ClassVar[QtCore.Signal] = QtCore.Signal()
 
@@ -203,8 +204,7 @@ class WindowLinker:
     """
     Mixin class that provides access methods for resources held by the main Window.
     These include:
-    - client: first attempts to grab the client set at init, if none exists use
-              the Window's client
+    - client: first attempts to grab the client set at init, if none exists use the Window's client
     - open_page_slot: grabs the slot from the Window
     """
 

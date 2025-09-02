@@ -215,3 +215,6 @@ inheritance_graph_attrs = dict(
 
 inheritance_alias = {
 }
+
+# -- Disabling requirement for all class members to have stub files
+numpydoc_class_members_toctree = False
