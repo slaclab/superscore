@@ -4,5 +4,5 @@ Backends
 .. automodule:: superscore.backends.core
    :members:
 
-.. automodule:: superscore.backends.directory
+.. automodule:: superscore.backends.mongo
    :members:
