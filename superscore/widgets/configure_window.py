@@ -3,7 +3,7 @@ import logging
 from typing import Dict, Optional, Union
 
 import qtawesome as qta
-from qtpy.QtCore import QModelIndex, Qt, Signal
+from qtpy.QtCore import QModelIndex, Qt, Signal, Slot
 from qtpy.QtWidgets import (QAbstractItemView, QDialog, QFrame, QHBoxLayout,
                             QHeaderView, QInputDialog, QLabel, QLineEdit,
                             QMessageBox, QPushButton, QSizePolicy, QSpacerItem,
@@ -25,7 +25,7 @@ class TagsDialog(QDialog):
     2. Read-only mode: Just viewing the group information without editing
     """
 
-    dataSaved = Signal(int, str, str, dict)
+    dataSaved = Signal(int, str, str, object)
 
     def __init__(self,
                  group_name: str,
@@ -287,6 +287,7 @@ class TagGroupsWindow(QWidget):
         self.setMinimumSize(600, 400)
 
         self.groups_data: dict[int, list[Union[str, str, dict[int, str]]]] = {}
+        self.index_to_tag_group: list[int] = []
 
         main_layout = QVBoxLayout(self)
         main_layout.setContentsMargins(0, 0, 0, 0)
@@ -324,7 +325,7 @@ class TagGroupsWindow(QWidget):
         frame_layout.addWidget(header_widget)
 
         self.table = QTableWidget()
-        self.table.setColumnCount(3)
+        self.table.setColumnCount(4)
 
         self.table.setEditTriggers(QTableWidget.NoEditTriggers)
         self.table.setSelectionMode(QTableWidget.SingleSelection)
@@ -334,8 +335,6 @@ class TagGroupsWindow(QWidget):
         self.table.verticalHeader().setVisible(False)
         self.table.setFrameShape(QFrame.NoFrame)
         self.table.cellChanged.connect(self.handle_cell_changed)
-
-        self.add_new_group()
 
         self.table.setColumnWidth(0, 100)  # Group name column
         self.table.setColumnWidth(1, 100)  # Tag count column
@@ -407,14 +406,12 @@ class TagGroupsWindow(QWidget):
         tags_dict : Dict[int, str], optional
             New dictionary of tags if provided, by default None
         """
-        if tags_dict is not None:
-            tag_dict = tags_dict
-        elif row in self.groups_data:
-            tag_dict = self.groups_data[row][2]
-        else:
-            tag_dict = {}
+        group = self.index_to_tag_group[row]
+        if group in self.groups_data:
+            tag_dict = self.groups_data[group][2]
+        tag_dict = tags_dict or {}
 
-        self.groups_data[row] = [name, description, tag_dict]
+        self.groups_data[group] = [name, description, tag_dict]
 
     def delete_row(self, row: int) -> bool:
         """
@@ -445,13 +442,17 @@ class TagGroupsWindow(QWidget):
         )
 
         if confirm == QMessageBox.Yes:
-            if row in self.groups_data:
-                del self.groups_data[row]
-
-            self.table.removeRow(row)
-
-            return True
-
+            group = self.index_to_tag_group[row]
+            try:
+                self.client.backend.delete_tag_group(group)
+            except Exception as e:
+                logger.exception(e)
+                return False
+            else:
+                del self.groups_data[group]
+                del self.index_to_tag_group[row]
+                self.table.removeRow(row)
+                return True
         return False
 
     def add_new_group(self) -> int:
@@ -463,7 +464,7 @@ class TagGroupsWindow(QWidget):
         int
             The row index of the newly added group
         """
-        current_row = self.table.rowCount()
+        row = self.table.rowCount()
 
         base_name = "New Group"
         group_name = base_name
@@ -473,25 +474,40 @@ class TagGroupsWindow(QWidget):
             counter += 1
             group_name = f"{base_name} {counter}"
 
-        self.table.insertRow(current_row)
-        self.table.setRowHeight(current_row, 50)
+        self.table.insertRow(row)
+        self.table.setRowHeight(row, 50)
 
         description = "New group description"
 
-        self.groups_data[current_row] = [group_name, description, {}]
+        group_id = self.client.backend.add_tag_group(group_name, description)
+        group_desc = description
+        self.groups_data[group_id] = [group_name, group_desc, {}]
+        self.index_to_tag_group.append(group_id)
 
         tag_chip = TagChip(None, {}, group_name)
-        self.table.setCellWidget(current_row, 0, tag_chip)
+        self.table.setCellWidget(row, 0, tag_chip)
 
         count_item = QTableWidgetItem("0 Tags")
         count_item.setFlags(count_item.flags() & ~Qt.ItemIsEditable)
-        self.table.setItem(current_row, 1, count_item)
+        self.table.setItem(row, 1, count_item)
 
         desc_item = QTableWidgetItem(description)
         desc_item.setFlags(desc_item.flags() & ~Qt.ItemIsEditable)
-        self.table.setItem(current_row, 2, desc_item)
+        self.table.setItem(row, 2, desc_item)
 
-        return current_row
+        delete_button = QPushButton()
+        delete_button.setIcon(qta.icon("msc.trash"))
+        delete_button.setFlat(True)
+        self.table.setCellWidget(row, 3, delete_button)
+
+        delete_button.clicked.connect(self.delete_row_slot)
+
+        return row
+
+    @Slot()
+    def delete_row_slot(self):
+        to_delete = self.table.indexAt(self.sender().pos()).row()
+        self.delete_row(to_delete)
 
     def group_name_exists(self, name: str, exclude_row: Optional[int] = None) -> bool:
         """
@@ -509,8 +525,9 @@ class TagGroupsWindow(QWidget):
         bool
             True if the name exists, False otherwise
         """
-        for row, (group_name, _, _) in self.groups_data.items():
-            if row != exclude_row and group_name.lower() == name.lower():
+        for group, (group_name, _, _) in self.groups_data.items():
+            excluded = self.index_to_tag_group[exclude_row] if exclude_row is not None else None
+            if group != excluded and group_name.lower() == name.lower():
                 return True
         return False
 
@@ -704,24 +721,35 @@ class TagGroupsWindow(QWidget):
         in the groups_data dictionary.
         """
         self.table.setRowCount(0)
+        self.index_to_tag_group.clear()
 
-        for row, (group_name, description, tag_dict) in self.groups_data.items():
-            row_idx = self.table.rowCount()
-            self.table.insertRow(row_idx)
-            self.table.setRowHeight(row_idx, 50)
+        for group, (group_name, description, tag_dict) in self.groups_data.items():
+            row = self.table.rowCount()
+            self.table.insertRow(row)
+            self.table.setRowHeight(row, 50)
 
             tag_chip = TagChip(None, {}, group_name)
-            self.table.setCellWidget(row_idx, 0, tag_chip)
+            self.table.setCellWidget(row, 0, tag_chip)
 
             tag_count: int = len(tag_dict)
             count_text: str = f"{tag_count} {'Tags' if tag_count != 1 else 'Tag'}"
             count_item = QTableWidgetItem(count_text)
             count_item.setFlags(count_item.flags() & ~Qt.ItemIsEditable)
-            self.table.setItem(row_idx, 1, count_item)
+            self.table.setItem(row, 1, count_item)
 
             desc_item = QTableWidgetItem(description)
             desc_item.setFlags(desc_item.flags() & ~Qt.ItemIsEditable)
-            self.table.setItem(row_idx, 2, desc_item)
+            self.table.setItem(row, 2, desc_item)
+
+            if self.permission_manager.is_admin():
+                delete_button = QPushButton()
+                delete_button.setIcon(qta.icon("msc.trash"))
+                delete_button.setFlat(True)
+
+                delete_button.clicked.connect(self.delete_row_slot)
+                self.table.setCellWidget(row, 3, delete_button)
+
+            self.index_to_tag_group.append(group)
 
     def print_all_data(self) -> str:
         """
@@ -736,7 +764,7 @@ class TagGroupsWindow(QWidget):
         print(f"Total Groups: {len(self.groups_data)}")
         print("===========================")
 
-        for row, (group_name, description, tag_dict) in self.groups_data.items():
+        for group, (group_name, description, tag_dict) in self.groups_data.items():
             if isinstance(tag_dict, dict):
                 tag_list = ", ".join(sorted(tag_dict.values())) if tag_dict else "No tags"
                 tag_count = len(tag_dict)
@@ -744,7 +772,7 @@ class TagGroupsWindow(QWidget):
                 tag_list = str(tag_dict) if tag_dict else "No tags"
                 tag_count = 0
 
-            print(f"\nGROUP {row+1}: {group_name}")
+            print(f"\nGROUP {group}: {group_name}")
             print(f"Description: {description}")
             print(f"Tags ({tag_count}): {tag_list}")
             print("---------------------------")
@@ -771,8 +799,9 @@ class TagGroupsWindow(QWidget):
         description = self.get_description_from_row(row)
 
         current_tags_dict = {}
-        if row in self.groups_data and isinstance(self.groups_data[row][2], dict):
-            current_tags_dict = self.groups_data[row][2]
+        group = self.index_to_tag_group[row]
+        if group in self.groups_data and isinstance(self.groups_data[group][2], dict):
+            current_tags_dict = self.groups_data[group][2]
 
         is_admin = self.permission_manager.is_admin()
 
@@ -793,22 +822,33 @@ class TagGroupsWindow(QWidget):
     ) -> None:
         self.update_group_data(row, new_name, new_desc, tags_dict)
 
-        tag_chip = self.table.cellWidget(row, 0)
-        if tag_chip:
+        try:
+            group = self.index_to_tag_group[row]
+            self.client.backend.update_tag_group(group, name=new_name, description=new_desc)
+            cur_tags = self.client.backend.get_tags()[group][2]
+            for tag in cur_tags:
+                if tag not in tags_dict:
+                    self.client.backend.delete_tag_from_group(group, tag)
+            for tag, name in tags_dict.items():
+                if tag not in cur_tags:
+                    self.client.backend.add_tag_to_group(group, name)
+                elif cur_tags[tag] != name:  # TODO: handle desc
+                    self.client.backend.update_tag_in_group(group, tag, name)
+        except Exception as e:
+            logger.exception(e)
+        else:
+            tag_chip = self.table.cellWidget(row, 0)
             tag_chip.tag_name = new_name
 
-        desc_item = self.table.item(row, 2)
-        if desc_item:
+            desc_item = self.table.item(row, 2)
             desc_item.setText(new_desc)
 
-        tag_count: int = len(tags_dict)
-        count_text: str = f"{tag_count} {'Tags' if tag_count != 1 else 'Tag'}"
-        count_item = self.table.item(row, 1)
-        if count_item:
+            tag_count: int = len(tags_dict)
+            count_text: str = f"{tag_count} {'Tags' if tag_count != 1 else 'Tag'}"
+            count_item = self.table.item(row, 1)
             count_item.setText(count_text)
 
-        self.table.horizontalHeader().resizeSections(QHeaderView.ResizeToContents)
-        self.client.backend.set_tags(self.groups_data)
+            self.table.horizontalHeader().resizeSections(QHeaderView.ResizeToContents)
 
     def update_admin_status(self, is_admin: bool) -> None:
         """

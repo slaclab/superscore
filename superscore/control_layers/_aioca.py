@@ -8,9 +8,9 @@ from aioca import CANothing, caget, camonitor, caput
 from aioca.types import AugmentedValue
 from epicscorelibs.ca import dbr
 
-from superscore.control_layers._base_shim import EpicsData, _BaseShim
+from superscore.control_layers._base_shim import _BaseShim
 from superscore.errors import CommunicationError
-from superscore.model import Severity, Status
+from superscore.model import EpicsData, Severity, Status
 
 logger = logging.getLogger(__name__)
 

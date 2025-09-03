@@ -1,8 +1,12 @@
+import logging
 import operator
 
 from qtpy import QtCore
 
+from superscore.errors import BackendError
 from superscore.model import Snapshot
+
+logger = logging.getLogger(__file__)
 
 
 class SnapshotTableModel(QtCore.QAbstractTableModel):
@@ -35,7 +39,7 @@ class SnapshotTableModel(QtCore.QAbstractTableModel):
         if role == QtCore.Qt.DisplayRole:
             snapshot = self._data[index.row()]
             if column == 0:
-                return snapshot.creation_time.strftime("%Y-%m-%d %H:%M:%S")
+                return snapshot.creation_time.astimezone().strftime("%Y-%m-%d %H:%M:%S")
             elif column == 1:
                 return snapshot.title
             else:
@@ -80,7 +84,14 @@ class SnapshotTableModel(QtCore.QAbstractTableModel):
         """Convert a QModelIndex to a Snapshot object."""
         if not (index and index.isValid()):
             return None
-        return self._data[index.row()]
+        row = index.row()
+        try:
+            filled_snapshot = self.client.backend.get_snapshots(uuid=self._data[row].uuid)
+        except BackendError as e:
+            logger.exception(e)
+        else:
+            self._data[row].pvs = filled_snapshot.pvs
+        return self._data[row]
 
 
 class SnapshotFilterModel(QtCore.QSortFilterProxyModel):

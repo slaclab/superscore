@@ -1,8 +1,8 @@
 ==============
 Control Layers
 ==============
+.. automodule:: superscore.control_layers.core
+   :members:
 
-.. toctree::
-   :maxdepth: 1
-
-   control_layers.rst
+.. automodule:: superscore.control_layers.status
+   :members:

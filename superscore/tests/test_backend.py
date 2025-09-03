@@ -1,5 +1,3 @@
-from uuid import UUID
-
 import pytest
 
 from superscore.backends.core import SearchTerm, _Backend
@@ -10,6 +8,7 @@ from superscore.errors import (BackendError, EntryExistsError,
                                EntryNotFoundError)
 from superscore.model import Collection, Parameter, Snapshot
 from superscore.tests.conftest import setup_test_stack
+from superscore.type_hints import UUID
 
 
 class TestTestBackend:

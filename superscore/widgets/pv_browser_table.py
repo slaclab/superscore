@@ -2,9 +2,10 @@ import logging
 from enum import Enum, auto
 from typing import Any
 
+import qtawesome as qta
 from qtpy import QtCore
 
-from superscore.model import Parameter
+from superscore.model import PV
 from superscore.type_hints import TagSet
 
 logger = logging.getLogger(__name__)
@@ -17,6 +18,7 @@ class PV_BROWSER_HEADER(Enum):
     PV = auto()
     READBACK = auto()
     TAGS = auto()
+    DELETE = auto()
 
     def display_string(self) -> str:
         return self._strings[self]
@@ -28,6 +30,7 @@ PV_BROWSER_HEADER._strings = {
     PV_BROWSER_HEADER.PV: "PV Name",
     PV_BROWSER_HEADER.READBACK: "Readback",
     PV_BROWSER_HEADER.TAGS: "Tags",
+    PV_BROWSER_HEADER.DELETE: "",
 }
 
 
@@ -36,7 +39,7 @@ class PVBrowserTableModel(QtCore.QAbstractTableModel):
         super().__init__(parent=parent)
         self.client = client
         self._data = list(self.client.search(
-            ("entry_type", "eq", Parameter),
+            ("entry_type", "eq", PV),
         ))
 
     def rowCount(self, _=QtCore.QModelIndex()) -> int:
@@ -69,24 +72,58 @@ class PVBrowserTableModel(QtCore.QAbstractTableModel):
         elif role == QtCore.Qt.ToolTipRole:
             entry = self._data[index.row()]
             if column == PV_BROWSER_HEADER.PV:
-                return entry.pv_name
+                return entry.setpoint
             elif column == PV_BROWSER_HEADER.READBACK and entry.readback is not None:
-                return entry.readback.pv_name
+                return entry.readback
         elif role == QtCore.Qt.DisplayRole:
             entry = self._data[index.row()]
             if column == PV_BROWSER_HEADER.DEVICE:
                 return None
             elif column == PV_BROWSER_HEADER.PV:
-                return entry.pv_name
+                return entry.setpoint
             elif column == PV_BROWSER_HEADER.READBACK:
-                return entry.readback.pv_name if entry.readback else NO_DATA
+                return entry.readback or NO_DATA
             elif column == PV_BROWSER_HEADER.TAGS:
                 return entry.tags if entry.tags else {}
+        elif role == QtCore.Qt.DecorationRole:
+            if column == PV_BROWSER_HEADER.DELETE:
+                return qta.icon("msc.trash")
         elif role == QtCore.Qt.UserRole:
             # Return the full entry object for further processing
             entry = self._data[index.row()]
             return entry
         return None
+
+    def add_pv(self, pv: PV):
+        i = len(self._data)
+        self.beginInsertRows(QtCore.QModelIndex(), i, i)
+        self._data.append(pv)
+        self.endInsertRows()
+
+    def removeRow(self, row, parent=None):
+        index = self.index(row, PV_BROWSER_HEADER.PV.value)
+        pv = self.data(index, QtCore.Qt.UserRole)
+        try:
+            self.client.backend.archive_pv(pv.uuid)
+        except Exception as e:
+            logger.exception(e)
+        else:
+            parent = parent or QtCore.QModelIndex()
+            self.beginRemoveRows(parent, row, row)
+            del self._data[row]
+            self.endRemoveRows()
+
+    def refetch_row(self, row):
+        index = self.index(row, PV_BROWSER_HEADER.PV.value)
+        pv_id = self.data(index, QtCore.Qt.UserRole).uuid
+        pv = list(
+            self.client.search(
+                ("entry_type", "eq", PV),
+                ("uuid", "eq", pv_id),
+            )
+        )[0]
+        self._data[row] = pv
+        self.dataChanged.emit(index, index)
 
 
 class PVBrowserFilterProxyModel(QtCore.QSortFilterProxyModel):

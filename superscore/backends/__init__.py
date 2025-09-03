@@ -1,9 +1,9 @@
-__all__ = ['BACKENDS']
+__all__ = ['BACKENDS', 'SearchTermType']
 
 import logging
 from typing import Dict
 
-from .core import _Backend
+from .core import SearchTermType, _Backend
 
 logger = logging.getLogger(__name__)
 
@@ -21,6 +21,9 @@ def _get_backend(backend: str) -> _Backend:
     if backend == 'directory':
         from .directory import DirectoryBackend
         return DirectoryBackend
+    if backend == 'mongo':
+        from .mongo import MongoBackend
+        return MongoBackend
 
     raise ValueError(f"Unknown backend {backend}")
 
@@ -42,6 +45,11 @@ def _init_backends() -> Dict[str, _Backend]:
         backends['directory'] = _get_backend('directory')
     except ImportError as ex:
         logger.debug(f"Directory Backend unavailable: {ex}")
+
+    try:
+        backends['mongo'] = _get_backend('mongo')
+    except ImportError as ex:
+        logger.debug(f"Mongo Backend unavailable: {ex}")
 
     return backends
 
