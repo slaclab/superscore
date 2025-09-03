@@ -1,5 +1,5 @@
-{% set package_name = "superscore" %}
-{% set import_name = "superscore" %}
+{% set package_name = "squirrel" %}
+{% set import_name = "squirrel" %}
 {% set version = load_file_regex(load_file=os.path.join(import_name, "_version.py"), regex_pattern=".*version = '(\S+)'").group(1) %}
 
 package:
@@ -43,7 +43,7 @@ test:
     - sphinx_rtd_theme
 
 about:
-  home: https://github.com/pcdshub/superscore
+  home: https://github.com/slaclab/squirrel
   license: LicenseRef-BSD-3-Clause-SLAC
   license_family: BSD
   summary: Configuration Management for EPICS PVs

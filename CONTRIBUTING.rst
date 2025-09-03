@@ -13,7 +13,7 @@ Types of Contributions
 Report Bugs
 ~~~~~~~~~~~
 
-Report bugs at https://github.com/slaclab/superscore/issues.
+Report bugs at https://github.com/slaclab/squirrel/issues.
 
 If you are reporting a bug, please include:
 
@@ -42,7 +42,7 @@ or even on the web in blog posts, articles, and such.
 Submit Feedback
 ~~~~~~~~~~~~~~~
 
-The best way to send feedback is to file an issue at https://github.com/slaclab/superscore/issues.
+The best way to send feedback is to file an issue at https://github.com/slaclab/squirrel/issues.
 
 If you are proposing a feature:
 
@@ -56,15 +56,15 @@ Get Started!
 
 Ready to contribute? Here's how to set up `squirrel` for local development.
 
-1. Fork the `superscore` repo on GitHub.
+1. Fork the `squirrel` repo on GitHub.
 2. Clone your fork locally::
 
-    $ git clone git@github.com:your_name_here/superscore.git
+    $ git clone git@github.com:your_name_here/squirrel.git
 
 3. Install your local copy into a new conda environment. Assuming you have conda installed, this is how you set up your fork for local development::
 
     $ conda create -n squirrel python=3.9 pip
-    $ cd superscore/
+    $ cd squirrel/
     $ pip install -e .
 
 4. Create a branch for local development::
