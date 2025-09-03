@@ -31,18 +31,18 @@ def xdg_config_patch(tmp_path):
 def sscore_cfg(xdg_config_patch: Path):
     # patch config discovery paths
     xdg_cfg = os.environ.get("XDG_CONFIG_HOME", '')
-    sscore_cfg = os.environ.get("SUPERSCORE_CFG", '')
+    sscore_cfg = os.environ.get("SQUIRREL_CFG", '')
 
     os.environ['XDG_CONFIG_HOME'] = str(xdg_config_patch)
-    os.environ['SUPERSCORE_CFG'] = ''
+    os.environ['SQUIRREL_CFG'] = ''
 
-    sscore_cfg_path = xdg_config_patch / "superscore.cfg"
+    sscore_cfg_path = xdg_config_patch / "squirrel.cfg"
     sscore_cfg_path.symlink_to(SAMPLE_CFG)
 
     yield str(sscore_cfg_path)
 
     # reset env vars
-    os.environ["SUPERSCORE_CFG"] = str(sscore_cfg)
+    os.environ["SQUIRREL_CFG"] = str(sscore_cfg)
     os.environ["XDG_CONFIG_HOME"] = xdg_cfg
 
 
@@ -150,8 +150,8 @@ def test_from_cfg(sscore_cfg: str):
 def test_find_config(sscore_cfg: str):
     assert sscore_cfg == Client.find_config()
 
-    # explicit SUPERSCORE_CFG env var supercedes XDG_CONFIG_HOME
-    os.environ['SUPERSCORE_CFG'] = 'other/cfg'
+    # explicit SQUIRREL_CFG env var supercedes XDG_CONFIG_HOME
+    os.environ['SQUIRREL_CFG'] = 'other/cfg'
     assert 'other/cfg' == Client.find_config()
 
 

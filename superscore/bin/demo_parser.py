@@ -1,5 +1,5 @@
 """
-`superscore demo` launches the UI along with a backend and an IOC
+`squirrel demo` launches the UI along with a backend and an IOC
 exposing PVs from a selected fixture. Select options in demo.cfg
 """
 

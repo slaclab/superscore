@@ -13,7 +13,7 @@ Types of Contributions
 Report Bugs
 ~~~~~~~~~~~
 
-Report bugs at https://github.com/pcdshub/superscore/issues.
+Report bugs at https://github.com/slaclab/superscore/issues.
 
 If you are reporting a bug, please include:
 
@@ -35,14 +35,14 @@ is open to whoever wants to implement it.
 Write Documentation
 ~~~~~~~~~~~~~~~~~~~
 
-superscore could always use more documentation, whether
-as part of the official superscore docs, in docstrings,
+squirrel could always use more documentation, whether
+as part of the official squirrel docs, in docstrings,
 or even on the web in blog posts, articles, and such.
 
 Submit Feedback
 ~~~~~~~~~~~~~~~
 
-The best way to send feedback is to file an issue at https://github.com/pcdshub/superscore/issues.
+The best way to send feedback is to file an issue at https://github.com/slaclab/superscore/issues.
 
 If you are proposing a feature:
 
@@ -54,7 +54,7 @@ If you are proposing a feature:
 Get Started!
 ------------
 
-Ready to contribute? Here's how to set up `superscore` for local development.
+Ready to contribute? Here's how to set up `squirrel` for local development.
 
 1. Fork the `superscore` repo on GitHub.
 2. Clone your fork locally::
@@ -63,7 +63,7 @@ Ready to contribute? Here's how to set up `superscore` for local development.
 
 3. Install your local copy into a new conda environment. Assuming you have conda installed, this is how you set up your fork for local development::
 
-    $ conda create -n superscore python=3.9 pip
+    $ conda create -n squirrel python=3.9 pip
     $ cd superscore/
     $ pip install -e .
 

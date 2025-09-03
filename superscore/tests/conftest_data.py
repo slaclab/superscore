@@ -508,7 +508,7 @@ def simple_comparison_snapshot() -> Snapshot:
 
 def sample_database() -> Root:
     """
-    A sample superscore database, including all the Entry types.
+    A sample squirrel database, including all the Entry types.
     Corresponds to a caproto.ioc_examples.fake_motor_record, which mimics an IMS
     motor record
     """

@@ -1,5 +1,5 @@
 ===============================
-superscore
+squirrel
 ===============================
 
 .. image:: https://github.com/slaclab/superscore/actions/workflows/standard.yml/badge.svg
@@ -23,8 +23,8 @@ Installation
 
 ::
 
-  $ conda create --name superscore pip
-  $ conda activate superscore
+  $ conda create --name squirrel pip
+  $ conda activate squirrel
   $
   $ conda install --file requirements.txt  # install statically, and only include packages necessary to run
   $ pip install .

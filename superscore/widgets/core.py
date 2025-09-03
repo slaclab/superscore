@@ -13,14 +13,14 @@ from qtpy import QtCore, QtWidgets
 from superscore.client import Client
 from superscore.qt_helpers import QDataclassBridge
 from superscore.type_hints import AnyDataclass, OpenPageSlot, TagDef
-from superscore.utils import SUPERSCORE_SOURCE_PATH
+from superscore.utils import SQUIRREL_SOURCE_PATH
 from superscore.widgets import TagsWidget, get_window
 
 
 class Display(DesignerDisplay):
     """Helper class for loading designer .ui files and adding logic"""
 
-    ui_dir: Path = SUPERSCORE_SOURCE_PATH / 'ui'
+    ui_dir: Path = SQUIRREL_SOURCE_PATH / 'ui'
 
 
 class DataWidget(QtWidgets.QWidget):

@@ -23,7 +23,7 @@ sys.path.insert(0, str(module_path))
 
 # -- Project information -----------------------------------------------------
 
-project = "superscore"
+project = "squirrel"
 author = "SLAC National Accelerator Laboratory"
 
 year = datetime.now().year
@@ -132,7 +132,7 @@ html_static_path = ["_static"]
 # -- Options for HTMLHelp output ---------------------------------------------
 
 # Output file base name for HTML help builder.
-htmlhelp_basename = "superscore_namedoc"
+htmlhelp_basename = "squirrel_namedoc"
 
 
 # -- Options for LaTeX output ------------------------------------------------
@@ -158,8 +158,8 @@ latex_elements = {
 latex_documents = [
     (
         master_doc,
-        "superscore.tex",
-        "superscore Documentation",
+        "squirrel.tex",
+        "squirrel Documentation",
         "SLAC National Accelerator Laboratory",
         "manual",
     ),
@@ -173,8 +173,8 @@ latex_documents = [
 man_pages = [
     (
         master_doc,
-        "superscore",
-        "superscore Documentation",
+        "squirrel",
+        "squirrel Documentation",
         [author],
         1,
     )
@@ -189,10 +189,10 @@ man_pages = [
 texinfo_documents = [
     (
         master_doc,
-        "superscore",
-        "superscore Documentation",
+        "squirrel",
+        "squirrel Documentation",
         author,
-        "superscore",
+        "squirrel",
         "One line description of project.",
         "Miscellaneous",
     ),

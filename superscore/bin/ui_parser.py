@@ -1,5 +1,5 @@
 """
-`superscore ui` opens up the main application window.
+`squirrel ui` opens up the main application window.
 
 The application will attempt to find and read configuration file.  This
 configuration file path can also be provided manually.

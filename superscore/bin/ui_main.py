@@ -1,5 +1,5 @@
 """
-`superscore ui` opens the graphical user interface for superscore
+`squirrel ui` opens the graphical user interface for squirrel
 
 Function components are separated from the arg parser to defer heavy imports
 """

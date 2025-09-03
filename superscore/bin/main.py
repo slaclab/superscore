@@ -1,5 +1,5 @@
 """
-`superscore` is the top-level command for accessing various subcommands.
+`squirrel` is the top-level command for accessing various subcommands.
 
 Try:
 
@@ -15,7 +15,7 @@ from inspect import iscoroutinefunction
 import superscore
 from superscore.permission_manager import PermissionManager
 
-logger = logging.getLogger('superscore')
+logger = logging.getLogger('squirrel')
 
 
 DESCRIPTION = __doc__
@@ -51,7 +51,7 @@ def _build_commands():
             unavailable.append((module, ex))
         else:
             result[module] = (mod.build_arg_parser, mod.main)
-            DESCRIPTION += f'\n    $ superscore {module} --help'
+            DESCRIPTION += f'\n    $ squirrel {module} --help'
 
     if unavailable:
         for module, ex in unavailable:
@@ -68,7 +68,7 @@ COMMANDS = _build_commands()
 
 def main():
     top_parser = argparse.ArgumentParser(
-        prog='superscore',
+        prog='squirrel',
         description=DESCRIPTION,
         formatter_class=argparse.RawTextHelpFormatter
     )
@@ -77,7 +77,7 @@ def main():
         '--version', '-V',
         action='version',
         version=superscore.__version__,
-        help="Show the superscore version number and exit."
+        help="Show the squirrel version number and exit."
     )
 
     top_parser.add_argument(

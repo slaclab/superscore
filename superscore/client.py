@@ -1,4 +1,4 @@
-"""Client for superscore.  Used for programmatic interactions with superscore"""
+"""Client for squirrel.  Used for programmatic interactions with squirrel"""
 import configparser
 import logging
 import os
@@ -118,11 +118,11 @@ class Client:
     @staticmethod
     def find_config() -> Path:
         """
-        Search for a ``superscore`` configuation file.  Searches in the following
+        Search for a ``squirrel`` configuation file.  Searches in the following
         locations in order
-        - ``$SUPERSCORE_CFG`` (a full path to a config file)
-        - ``$XDG_CONFIG_HOME/{superscore.cfg, .superscore.cfg}`` (either filename)
-        - ``~/.config/{superscore.cfg, .superscore.cfg}``
+        - ``$SQUIRREL_CFG`` (a full path to a config file)
+        - ``$XDG_CONFIG_HOME/{squirrel.cfg, .squirrel.cfg}`` (either filename)
+        - ``~/.config/{squirrel.cfg, .squirrel.cfg}``
 
         Returns
         -------
@@ -135,18 +135,18 @@ class Client:
             If no configuration file can be found by the described methodology
         """
         # Point to with an environment variable
-        if os.environ.get('SUPERSCORE_CFG', False):
-            superscore_cfg = os.environ.get('SUPERSCORE_CFG')
-            logger.debug("Found $SUPERSCORE_CFG specification for Client "
-                         "configuration at %s", superscore_cfg)
-            return superscore_cfg
+        if os.environ.get('SQUIRREL_CFG', False):
+            squirrel_cfg = os.environ.get('SQUIRREL_CFG')
+            logger.debug("Found $SQUIRREL_CFG specification for Client "
+                         "configuration at %s", squirrel_cfg)
+            return squirrel_cfg
         # Search in the current directory and home directory
         else:
             config_dirs = [os.environ.get('XDG_CONFIG_HOME', "."),
                            os.path.expanduser('~/.config'),]
             for directory in config_dirs:
-                logger.debug('Searching for superscore config in %s', directory)
-                for path in ('.superscore.cfg', 'superscore.cfg'):
+                logger.debug('Searching for squirrel config in %s', directory)
+                for path in ('.squirrel.cfg', 'squirrel.cfg'):
                     full_path = os.path.join(directory, path)
 
                     if os.path.exists(full_path):
@@ -157,7 +157,7 @@ class Client:
         if os.path.isfile(default_config):
             return default_config
         else:
-            raise OSError("No superscore configuration file found")
+            raise OSError("No squirrel configuration file found")
 
     def search(self, *post: SearchTermType) -> Generator[Entry, None, None]:
         """

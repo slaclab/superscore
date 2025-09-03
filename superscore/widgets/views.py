@@ -651,7 +651,7 @@ class RootTreeView(QtWidgets.QTreeView, WindowLinker):
             return
 
         if not isinstance(client, Client):
-            raise ValueError("Provided client is not a superscore Client")
+            raise ValueError("Provided client is not a squirrel Client")
 
         self._client = client
         self.maybe_setup_model()
@@ -1415,7 +1415,7 @@ class BaseDataTableView(QtWidgets.QTableView, WindowLinker):
             return
 
         if not isinstance(client, Client):
-            raise ValueError("Provided client is not a superscore Client")
+            raise ValueError("Provided client is not a squirrel Client")
 
         self._client = client
         self.maybe_setup_model()

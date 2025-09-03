@@ -15,7 +15,7 @@ classifiers = [
 description = "Configuration Management for EPICS PVs"
 dynamic = [ "version", "readme", "dependencies", "optional-dependencies",]
 keywords = []
-name = "superscore"
+name = "squirrel"
 requires-python = ">=3.9"
 
 [options]

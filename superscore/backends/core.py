@@ -1,5 +1,5 @@
 """
-Base superscore data storage backend interface
+Base squirrel data storage backend interface
 """
 import re
 from collections.abc import Container, Generator

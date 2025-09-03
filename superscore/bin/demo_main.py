@@ -1,5 +1,5 @@
 """
-`superscore demo` opens the graphical user interface for superscore with a demo
+`squirrel demo` opens the graphical user interface for squirrel with a demo
 database pre-loaded
 
 Function components are separated from the arg parser to defer heavy imports

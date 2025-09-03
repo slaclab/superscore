@@ -34,7 +34,7 @@ logger = logging.getLogger(__name__)
 
 
 class Window(QtWidgets.QMainWindow, metaclass=QtSingleton):
-    """Main superscore window"""
+    """Main squirrel window"""
 
     # Diff dispatcher singleton, used to notify when diffs are ready
     diff_dispatcher: DiffDispatcher = DiffDispatcher()

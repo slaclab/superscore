@@ -9,14 +9,14 @@ from superscore.tests.ioc.ioc_factory import TempIOC
 
 
 def test_cli_help(monkeypatch):
-    monkeypatch.setattr(sys, "argv", ["superscore", "demo", "--help"])
+    monkeypatch.setattr(sys, "argv", ["squirrel", "demo", "--help"])
     with pytest.raises(SystemExit):
         ss_main.main()
 
 
 @pytest.mark.parametrize('subcommand', list(ss_main.MODULES))
 def test_help_module(monkeypatch, subcommand: str):
-    monkeypatch.setattr(sys, "argv", ["superscore", subcommand, "--help"])
+    monkeypatch.setattr(sys, "argv", ["squirrel", subcommand, "--help"])
     with pytest.raises(SystemExit):
         ss_main.main()
 
@@ -29,7 +29,7 @@ def test_demo_smoke(monkeypatch):
     def mockreturn(*args, **kwargs):
         return
 
-    monkeypatch.setattr(sys, "argv", ["superscore", "demo"])
+    monkeypatch.setattr(sys, "argv", ["squirrel", "demo"])
     # Prevent qt components from being created, since we can't fully clean up
     monkeypatch.setattr(demo_main, 'ui_main', mockreturn)
     monkeypatch.setattr(TempIOC, "__enter__", mockreturn)
