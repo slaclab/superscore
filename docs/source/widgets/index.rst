@@ -1,17 +1,17 @@
 =======
 Widgets
 =======
-.. automodule:: superscore.widgets.core
+.. automodule:: squirrel.widgets.core
    :members:
 
-.. automodule:: superscore.widgets.flow_layout
+.. automodule:: squirrel.widgets.flow_layout
    :members:
 
-.. automodule:: superscore.widgets.pv_details_components
+.. automodule:: squirrel.widgets.pv_details_components
    :members:
 
-.. automodule:: superscore.widgets.tag
+.. automodule:: squirrel.widgets.tag
    :members:
 
-.. automodule:: superscore.widgets.window
+.. automodule:: squirrel.widgets.window
    :members:

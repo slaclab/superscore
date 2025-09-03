@@ -1,17 +1,17 @@
 ======================
 Table Models and Views
 ======================
-.. automodule:: superscore.widgets.snapshot_table
+.. automodule:: squirrel.widgets.snapshot_table
    :members:
 
-.. automodule:: superscore.widgets.pv_table
+.. automodule:: squirrel.widgets.pv_table
    :members:
 
-.. automodule:: superscore.widgets.snapshot_comparison_table
+.. automodule:: squirrel.widgets.snapshot_comparison_table
    :members:
 
-.. automodule:: superscore.widgets.pv_browser_table
+.. automodule:: squirrel.widgets.pv_browser_table
    :members:
 
-.. automodule:: superscore.widgets.squirrel_table_view
+.. automodule:: squirrel.widgets.squirrel_table_view
    :members:
