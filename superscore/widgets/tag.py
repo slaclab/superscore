@@ -311,7 +311,9 @@ class TagsWidget(QtWidgets.QWidget):
         return None
 
     def paint(self, painter):
-        painter.translate(self.layout().itemAt(0).widget().pos())
+        first_item = self.layout().itemAt(0)
+        if first_item:  # will be None if widget doesn't have any active tags
+            painter.translate(first_item.widget().pos())
         for i in range(self.layout().count()):
             chip = self.layout().itemAt(i).widget()
             if chip.isEnabled() or len(chip.tags) > 0:
