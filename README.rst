@@ -1,15 +1,15 @@
 ===============================
-superscore
+squirrel
 ===============================
 
-.. image:: https://github.com/slaclab/superscore/actions/workflows/standard.yml/badge.svg
-        :target: https://github.com/slaclab/superscore/actions/workflows/standard.yml
+.. image:: https://github.com/slaclab/squirrel/actions/workflows/standard.yml/badge.svg
+        :target: https://github.com/slaclab/squirrel/actions/workflows/standard.yml
 
-.. image:: https://img.shields.io/pypi/v/superscore.svg
-        :target: https://pypi.python.org/pypi/superscore
+.. image:: https://img.shields.io/pypi/v/squirrel.svg
+        :target: https://pypi.python.org/pypi/squirrel
 
 
-`Documentation <https://slaclab.github.io/superscore/>`_
+`Documentation <https://slaclab.github.io/squirrel/>`_
 
 Configuration Management for EPICS PVs
 
@@ -23,8 +23,8 @@ Installation
 
 ::
 
-  $ conda create --name superscore pip
-  $ conda activate superscore
+  $ conda create --name squirrel pip
+  $ conda activate squirrel
   $
   $ conda install --file requirements.txt  # install statically, and only include packages necessary to run
   $ pip install .

@@ -1,8 +1,8 @@
 ==============
 Control Layers
 ==============
-.. automodule:: superscore.control_layers.core
+.. automodule:: squirrel.control_layers.core
    :members:
 
-.. automodule:: superscore.control_layers.status
+.. automodule:: squirrel.control_layers.status
    :members:
