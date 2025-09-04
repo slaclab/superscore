@@ -8,6 +8,12 @@ Welcome to superscore's documentation!
 
 .. toctree::
    :maxdepth: 2
+   :caption: User Documentation
+
+   import_format.rst
+
+.. toctree::
+   :maxdepth: 2
    :caption: Developer Documentation
 
    widgets/index.rst
