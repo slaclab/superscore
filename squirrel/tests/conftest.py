@@ -8,13 +8,12 @@ from unittest.mock import MagicMock
 import apischema
 import pytest
 
-from squirrel.backends.core import _Backend
+from squirrel.backends import _Backend
 from squirrel.backends.directory import DirectoryBackend
 from squirrel.backends.filestore import FilestoreBackend
 from squirrel.backends.test import TestBackend
 from squirrel.client import Client
-from squirrel.control_layers._base_shim import _BaseShim
-from squirrel.control_layers.core import ControlLayer
+from squirrel.control_layer import ControlLayer, _BaseShim
 from squirrel.model import (Collection, Entry, Nestable, Parameter, Root,
                             Setpoint)
 from squirrel.tests.ioc import IOCFactory

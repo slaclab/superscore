@@ -1,9 +1,7 @@
 import pytest
 
-from squirrel.backends.core import SearchTerm, _Backend
-from squirrel.backends.directory import DirectoryBackend
-from squirrel.backends.filestore import FilestoreBackend
-from squirrel.backends.test import TestBackend
+from squirrel.backends import (DirectoryBackend, FilestoreBackend, SearchTerm,
+                               TestBackend, _Backend)
 from squirrel.errors import BackendError, EntryExistsError, EntryNotFoundError
 from squirrel.model import Collection, Parameter, Snapshot
 from squirrel.tests.conftest import setup_test_stack

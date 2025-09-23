@@ -260,7 +260,7 @@ class TagsDialog(QDialog):
         self.dataSaved.emit(self.original_row, new_name, new_desc, self.tags_dict)
 
 
-class TagGroupsWindow(QWidget):
+class TagPage(QWidget):
     """
     Main window for managing tag groups.
 

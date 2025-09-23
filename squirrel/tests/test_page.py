@@ -6,21 +6,17 @@ import pytest
 from pytestqt.qtbot import QtBot
 from qtpy import QtCore, QtWidgets
 
-from squirrel.backends.filestore import FilestoreBackend
+from squirrel.backends import FilestoreBackend
 from squirrel.client import Client
-from squirrel.control_layers._base_shim import EpicsData
+from squirrel.control_layer import EpicsData
 from squirrel.model import Collection, Parameter, Readback, Setpoint, Snapshot
+from squirrel.pages import (BaseParameterPage, CollectionBuilderPage,
+                            CollectionPage, DiffPage, ParameterPage,
+                            ReadbackPage, SearchPage, SetpointPage,
+                            SnapshotComparisonPage, SnapshotDetailsPage,
+                            SnapshotPage)
+from squirrel.tables import COMPARE_HEADER, PV_HEADER
 from squirrel.tests.conftest import setup_test_stack
-from squirrel.widgets.page.collection_builder import CollectionBuilderPage
-from squirrel.widgets.page.diff import DiffPage
-from squirrel.widgets.page.entry import (BaseParameterPage, CollectionPage,
-                                         ParameterPage, ReadbackPage,
-                                         SetpointPage, SnapshotPage)
-from squirrel.widgets.page.search import SearchPage
-from squirrel.widgets.page.snapshot_comparison import SnapshotComparisonPage
-from squirrel.widgets.page.snapshot_details import SnapshotDetailsPage
-from squirrel.widgets.pv_table import PV_HEADER
-from squirrel.widgets.snapshot_comparison_table import COMPARE_HEADER
 
 
 @pytest.fixture(scope='function')
@@ -214,7 +210,7 @@ def test_open_page_slot(
     page_fixture: str,
     request: pytest.FixtureRequest,
 ):
-    with patch("squirrel.widgets.page.entry.BaseParameterPage.open_page_slot",
+    with patch("squirrel.pages.entry.BaseParameterPage.open_page_slot",
                new_callable=PropertyMock):
         page: BaseParameterPage = request.getfixturevalue(page_fixture)
         page.open_rbv_button.clicked.emit()

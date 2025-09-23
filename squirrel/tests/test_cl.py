@@ -2,7 +2,7 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from squirrel.control_layers.status import TaskStatus
+from squirrel.control_layer import TaskStatus
 from squirrel.errors import CommunicationError
 
 

@@ -116,7 +116,7 @@
   <customwidget>
    <class>TagsWidget</class>
    <extends>QWidget</extends>
-   <header>squirrel.widgets.core</header>
+   <header>squirrel.widgets</header>
    <container>1</container>
   </customwidget>
  </customwidgets>

@@ -8,12 +8,12 @@ from collections.abc import Iterable
 from functools import singledispatchmethod
 from typing import Any, Callable, Dict, List, Optional, Union
 
-from squirrel.control_layers.status import TaskStatus
 from squirrel.errors import CommunicationError
 from squirrel.model import EpicsData
 
 from ._aioca import AiocaShim
 from ._base_shim import _BaseShim
+from .status import TaskStatus
 
 logger = logging.getLogger(__name__)
 

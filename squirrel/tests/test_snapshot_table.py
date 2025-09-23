@@ -4,7 +4,7 @@ from unittest.mock import Mock
 from qtpy import QtCore
 
 from squirrel.model import Readback
-from squirrel.widgets.snapshot_table import SnapshotFilterModel
+from squirrel.tables import SnapshotFilterModel
 
 
 def test_meta_pv_numeric_filter():

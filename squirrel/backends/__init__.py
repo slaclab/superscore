@@ -3,7 +3,8 @@ __all__ = ['BACKENDS', 'SearchTermType']
 import logging
 from typing import Dict
 
-from .core import SearchTermType, _Backend
+from .core import SearchTerm, SearchTermType, _Backend  # noqa
+from .mongo import MongoBackend
 
 logger = logging.getLogger(__name__)
 
@@ -22,7 +23,6 @@ def _get_backend(backend: str) -> _Backend:
         from .directory import DirectoryBackend
         return DirectoryBackend
     if backend == 'mongo':
-        from .mongo import MongoBackend
         return MongoBackend
 
     raise ValueError(f"Unknown backend {backend}")

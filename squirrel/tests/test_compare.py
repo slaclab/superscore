@@ -4,8 +4,7 @@ from uuid import UUID
 
 import pytest
 
-from squirrel.backends.core import SearchTerm
-from squirrel.backends.filestore import FilestoreBackend
+from squirrel.backends import FilestoreBackend, SearchTerm
 from squirrel.client import Client
 from squirrel.compare import AttributePath, DiffItem, EntryDiff, walk_find_diff
 from squirrel.model import (Collection, Entry, Parameter, Readback, Setpoint,

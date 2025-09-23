@@ -3,7 +3,7 @@ from typing import Any, Callable
 
 import pytest
 
-from squirrel.control_layers.status import TaskStatus
+from squirrel.control_layer import TaskStatus
 
 
 @pytest.fixture

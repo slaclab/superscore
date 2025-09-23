@@ -3,7 +3,12 @@ import qtawesome as qta
 import squirrel.color
 from squirrel.model import Severity, Status
 
+from .data_widget import DataWidget  # noqa
+from .display import Display  # noqa
 from .flow_layout import FlowLayout
+from .namedesctags import NameDescTagsWidget  # noqa
+from .qsingleton import QtSingleton  # noqa
+from .squirrel_table_view import SquirrelTableView  # noqa
 from .tag import TagChip, TagsWidget
 
 __all__ = [

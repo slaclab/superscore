@@ -15,21 +15,16 @@ from qtpy.QtGui import QCloseEvent
 
 from squirrel.client import Client
 from squirrel.model import PV, EpicsData, Snapshot
+from squirrel.pages import (Page, PVBrowserPage, SnapshotComparisonPage,
+                            SnapshotDetailsPage, TagPage)
 from squirrel.permission_manager import PermissionManager
-from squirrel.widgets.configure_window import TagGroupsWindow
-from squirrel.widgets.core import NameDescTagsWidget, QtSingleton
+from squirrel.tables import (PVTableModel, SnapshotFilterModel,
+                             SnapshotTableModel)
+from squirrel.widgets import NameDescTagsWidget, QtSingleton, SquirrelTableView
 from squirrel.widgets.date_range import DateRangeWidget
 from squirrel.widgets.filter_bar import FilterBar
-from squirrel.widgets.page.page import Page
-from squirrel.widgets.page.pv_browser import PVBrowserPage
-from squirrel.widgets.page.snapshot_comparison import SnapshotComparisonPage
-from squirrel.widgets.page.snapshot_details import SnapshotDetailsPage
 from squirrel.widgets.pv_details_components import (PVDetails, PVDetailsPopup,
                                                     PVDetailsPopupEditable)
-from squirrel.widgets.pv_table import PVTableModel
-from squirrel.widgets.snapshot_table import (SnapshotFilterModel,
-                                             SnapshotTableModel)
-from squirrel.widgets.squirrel_table_view import SquirrelTableView
 from squirrel.widgets.views import DiffDispatcher
 
 logger = logging.getLogger(__name__)
@@ -209,7 +204,7 @@ class Window(QtWidgets.QMainWindow, metaclass=QtSingleton):
         configure_layout.setContentsMargins(0, 11, 0, 0)
         configure_page.setLayout(configure_layout)
 
-        self.tag_groups_window = TagGroupsWindow(self.client)
+        self.tag_groups_window = TagPage(self.client)
         self.tag_groups_window.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Preferred)
         configure_layout.addWidget(self.tag_groups_window)
 

@@ -1,4 +1,4 @@
-from squirrel.control_layers.core import ControlLayer
+from squirrel.control_layer import ControlLayer
 
 
 def test_ioc(linac_ioc):

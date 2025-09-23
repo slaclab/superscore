@@ -7,10 +7,8 @@ from pathlib import Path
 from typing import Any, Generator, Iterable, List, Optional, Union
 from uuid import UUID
 
-from squirrel.backends import get_backend
-from squirrel.backends.core import SearchTerm, SearchTermType, _Backend
-from squirrel.control_layers import ControlLayer, EpicsData
-from squirrel.control_layers.status import TaskStatus
+from squirrel.backends import SearchTerm, SearchTermType, _Backend, get_backend
+from squirrel.control_layer import ControlLayer, EpicsData, TaskStatus
 from squirrel.model import PV, Snapshot
 from squirrel.utils import build_abs_path
 
@@ -384,13 +382,3 @@ class Client:
         if value is None or not isinstance(value, EpicsData):
             return EpicsData(data=None)
         return value
-
-    def validate(self, entry: Entry):
-        """
-        Validate ``entry`` is properly formed and able to be inserted into
-        the backend.  Includes checks the following:
-        - dataclass is valid
-        - reachable from root
-        - references are not cyclical, and type-correct
-        """
-        raise NotImplementedError

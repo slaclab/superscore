@@ -5,10 +5,9 @@ from qtpy import QtCore, QtWidgets
 
 from squirrel.client import Client
 from squirrel.model import Snapshot
-from squirrel.widgets.page.page import Page
-from squirrel.widgets.pv_table import PV_HEADER, PVTableModel
-from squirrel.widgets.snapshot_table import SnapshotTableModel
-from squirrel.widgets.squirrel_table_view import SquirrelTableView
+from squirrel.pages import Page
+from squirrel.tables import PV_HEADER, PVTableModel, SnapshotTableModel
+from squirrel.widgets import SquirrelTableView
 
 
 class SnapshotDetailsPage(Page):

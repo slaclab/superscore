@@ -11,7 +11,7 @@ from uuid import UUID
 
 from apischema import deserialize, serialize
 
-from squirrel.backends.core import SearchTermType, _Backend
+from squirrel.backends import SearchTermType, _Backend
 from squirrel.errors import BackendError, EntryExistsError, EntryNotFoundError
 from squirrel.model import Entry, Nestable, Parameter, Root
 from squirrel.type_hints import TagDef

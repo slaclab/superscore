@@ -5,12 +5,10 @@ from uuid import uuid4
 
 import pytest
 
-from squirrel.backends.core import SearchTerm
-from squirrel.backends.directory import DirectoryBackend
-from squirrel.backends.filestore import FilestoreBackend
-from squirrel.backends.test import TestBackend
+from squirrel.backends import (DirectoryBackend, FilestoreBackend, SearchTerm,
+                               TestBackend)
 from squirrel.client import Client
-from squirrel.control_layers import EpicsData
+from squirrel.control_layer import EpicsData
 from squirrel.errors import CommunicationError, EntryNotFoundError
 from squirrel.model import (Collection, Entry, Nestable, Parameter, Readback,
                             Root, Setpoint, Snapshot)
@@ -85,7 +83,7 @@ def test_apply(
     assert put_mock.call_count == 1
 
 
-@patch('squirrel.control_layers.core.ControlLayer._get_one')
+@patch('squirrel.control_layer.core.ControlLayer._get_one')
 @setup_test_stack(backend_type=[DirectoryBackend], mock_cl=False)
 def test_snap(
     get_mock,
@@ -107,7 +105,7 @@ def test_snap(
     assert any(isinstance(e.readback, Readback) for e in snapshot.children)
 
 
-@patch('squirrel.control_layers.core.ControlLayer._get_one')
+@patch('squirrel.control_layer.core.ControlLayer._get_one')
 @setup_test_stack(backend_type=[DirectoryBackend], mock_cl=False)
 def test_snap_exception(get_mock, test_client: Client, sample_database_fixture: Root):
     # Testing get -> _get_one chain, must not mock control layer
@@ -119,7 +117,7 @@ def test_snap_exception(get_mock, test_client: Client, sample_database_fixture: 
     assert snapshot.children[2].data is None
 
 
-@patch('squirrel.control_layers.core.ControlLayer._get_one')
+@patch('squirrel.control_layer.core.ControlLayer._get_one')
 @setup_test_stack(backend_type=[DirectoryBackend], mock_cl=False)
 def test_snap_RO(get_mock, test_client: Client, sample_database_fixture: Root):
     # Testing get -> _get_one chain, must not mock control layer

@@ -2,7 +2,7 @@ from typing import TYPE_CHECKING, Callable, Dict, Protocol, Union
 
 if TYPE_CHECKING:
     from squirrel.model import Entry
-    from squirrel.widgets.core import DataWidget
+    from squirrel.widgets import DataWidget
 
 AnyEpicsType = Union[None, float, str, bool, int]  # this order is important for apischema coercion
 TagDef = dict[int, list[Union[str, str, dict[int, str]]]]  # the definition of available tag groups

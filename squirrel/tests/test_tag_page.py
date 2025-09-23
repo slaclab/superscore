@@ -10,7 +10,7 @@ from qtpy.QtCore import QModelIndex, Qt
 from qtpy.QtWidgets import (QApplication, QInputDialog, QMessageBox,
                             QPushButton, QWidget)
 
-from squirrel.widgets.configure_window import TagGroupsWindow, TagsDialog
+from squirrel.pages import TagPage, TagsDialog
 
 # ---------------------------------------------------------------------------#
 #                    ----------  stubs & fixtures  ----------                 #
@@ -154,60 +154,60 @@ def test_tagsdialog_save_changes(monkeypatch: pytest.MonkeyPatch, app: QApplicat
 
 
 # ---------------------------------------------------------------------------#
-#                     ----------  TagGroupsWindow ----------                  #
+#                     ----------  TagPage ----------                  #
 # ---------------------------------------------------------------------------#
 
 
 @pytest.fixture()
-def window(dummy_client: _DummyClient) -> TagGroupsWindow:
+def window(dummy_client: _DummyClient) -> TagPage:
     """
-    Create a ``TagGroupsWindow`` **and** add one starter group so that
+    Create a ``TagPage`` **and** add one starter group so that
     row-based logic has something to work with.
     """
-    w = TagGroupsWindow(dummy_client)
+    w = TagPage(dummy_client)
     if w.table.rowCount() == 0:
         w.add_new_group()
     return w
 
 
-def test_get_group_name_from_row(window: TagGroupsWindow) -> None:
+def test_get_group_name_from_row(window: TagPage) -> None:
     """Row-0 name should start with *New Group* by default."""
     assert window.get_group_name_from_row(0).startswith("New Group")
 
 
-def test_get_description_from_row(window: TagGroupsWindow) -> None:
+def test_get_description_from_row(window: TagPage) -> None:
     """Default description for row-0 should match constructor value."""
     assert window.get_description_from_row(0) == "New group description"
 
 
-def test_update_group_data(window: TagGroupsWindow) -> None:
+def test_update_group_data(window: TagPage) -> None:
     """The internal dict must reflect updated values."""
     window.update_group_data(0, "X", "Y", {0: "a"})
     assert window.groups_data[0][0:2] == ["X", "Y"]
 
 
-def test_delete_row(monkeypatch: pytest.MonkeyPatch, window: TagGroupsWindow) -> None:
+def test_delete_row(monkeypatch: pytest.MonkeyPatch, window: TagPage) -> None:
     """Row is removed when the user confirms the delete dialog."""
     monkeypatch.setattr(QMessageBox, "question", lambda *_: QMessageBox.Yes)
     assert window.delete_row(0) is True
     assert window.table.rowCount() == 0
 
 
-def test_add_new_group(window: TagGroupsWindow) -> None:
+def test_add_new_group(window: TagPage) -> None:
     """`add_new_group` appends a new row and reports its index."""
     idx = window.add_new_group()
     assert idx == 1
     assert window.table.rowCount() == 2
 
 
-def test_group_name_exists(window: TagGroupsWindow) -> None:
+def test_group_name_exists(window: TagPage) -> None:
     """Duplicate names (case-insensitive) must be detected."""
     name = window.get_group_name_from_row(0)
     assert window.group_name_exists(name) is True
     assert window.group_name_exists("totally-unique") is False
 
 
-def test_toggle_edit_mode(window: TagGroupsWindow, qtbot) -> None:
+def test_toggle_edit_mode(window: TagPage, qtbot) -> None:
     """First click should put the row into *editing* state."""
     window.table.setColumnCount(4)
     btn = QPushButton("Edit")
@@ -218,13 +218,13 @@ def test_toggle_edit_mode(window: TagGroupsWindow, qtbot) -> None:
     assert btn.property("editing") is True
 
 
-def test_edit_next_cell(window: TagGroupsWindow) -> None:
+def test_edit_next_cell(window: TagPage) -> None:
     """After editing column-0, focus should move to column-2."""
     window.edit_next_cell(0, 0)
     assert window.table.currentColumn() == 2
 
 
-def test_handle_cell_changed(window: TagGroupsWindow) -> None:
+def test_handle_cell_changed(window: TagPage) -> None:
     """During edit mode the method delegates without crashing."""
     window.table.setColumnCount(4)
     btn = QPushButton("Edit")
@@ -234,12 +234,12 @@ def test_handle_cell_changed(window: TagGroupsWindow) -> None:
     window.handle_cell_changed(0, 0)
 
 
-def test_get_all_data(window: TagGroupsWindow) -> None:
+def test_get_all_data(window: TagPage) -> None:
     """Method returns the *identical* dict instance."""
     assert window.get_all_data() is window.groups_data
 
 
-def test_save_and_load_data(tmp_path: Path, window: TagGroupsWindow) -> None:
+def test_save_and_load_data(tmp_path: Path, window: TagPage) -> None:
     """Round-trip via JSON file preserves data."""
     file_ = tmp_path / "tags.json"
     original = copy.deepcopy(window.groups_data)
@@ -250,21 +250,21 @@ def test_save_and_load_data(tmp_path: Path, window: TagGroupsWindow) -> None:
     assert window.groups_data == original
 
 
-def test_rebuild_table_from_data(window: TagGroupsWindow) -> None:
+def test_rebuild_table_from_data(window: TagPage) -> None:
     """Row count after rebuild must match the data dict size."""
     window.groups_data[1] = ["G2", "D2", {}]
     window.rebuild_table_from_data()
     assert window.table.rowCount() == 2
 
 
-def test_print_all_data(capsys: pytest.CaptureFixture[str], window: TagGroupsWindow) -> None:
+def test_print_all_data(capsys: pytest.CaptureFixture[str], window: TagPage) -> None:
     """Method prints a summary and returns a string."""
     s = window.print_all_data()
     out = capsys.readouterr().out
     assert isinstance(s, str) and "TAG GROUPS DATA" in out
 
 
-def test_handle_double_click(monkeypatch: pytest.MonkeyPatch, window: TagGroupsWindow) -> None:
+def test_handle_double_click(monkeypatch: pytest.MonkeyPatch, window: TagPage) -> None:
     """Double-click creates a (patched) dialog and executes it modally."""
     made = {"done": False}
 
@@ -284,7 +284,7 @@ def test_handle_double_click(monkeypatch: pytest.MonkeyPatch, window: TagGroupsW
     assert made["done"]
 
 
-def test_update_admin_status(window: TagGroupsWindow) -> None:
+def test_update_admin_status(window: TagPage) -> None:
     """Button visibility toggles with admin status."""
     window.update_admin_status(False)
     assert window.new_group_button.parent() is None

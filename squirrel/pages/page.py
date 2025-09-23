@@ -4,7 +4,7 @@ from uuid import UUID
 from qtpy import QtWidgets
 from qtpy.QtGui import QCloseEvent
 
-from squirrel.widgets.pv_table import PVTableModel
+from squirrel.tables import PVTableModel
 
 logger = getLogger(__name__)
 

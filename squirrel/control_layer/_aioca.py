@@ -8,9 +8,10 @@ from aioca import CANothing, caget, camonitor, caput
 from aioca.types import AugmentedValue
 from epicscorelibs.ca import dbr
 
-from squirrel.control_layers._base_shim import _BaseShim
 from squirrel.errors import CommunicationError
 from squirrel.model import EpicsData, Severity, Status
+
+from ._base_shim import _BaseShim
 
 logger = logging.getLogger(__name__)
 
