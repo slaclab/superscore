@@ -331,11 +331,12 @@ class Window(QtWidgets.QMainWindow, metaclass=QtSingleton):
         if isinstance(index.model(), QtCore.QSortFilterProxyModel):
             source_model = index.model().sourceModel()
             source_index = index.model().mapToSource(index)
-            data = source_model._data[source_index.row()]
         elif isinstance(index.model(), PVTableModel):
-            data = index.model()._data[index.row()]
+            source_model = index.model()
+            source_index = index
         else:
             raise TypeError("Invalid model type passed to open_pv_details")
+        data = source_model._data[source_index.row()]
 
         # Get data via the client for alarm limits
         epics_data: EpicsData = None
