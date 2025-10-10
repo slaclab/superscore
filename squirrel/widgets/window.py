@@ -366,7 +366,7 @@ class Window(QtWidgets.QMainWindow, metaclass=QtSingleton):
         )
         if editable:
             self.popup.accepted.connect(self.update_pv)
-            self.popup.accepted.connect(lambda: view.model().sourceModel().refetch_row(index.row()))
+            self.popup.accepted.connect(lambda: source_model.refetch_row(source_index.row()))
         self.popup.adjustSize()
 
         table_top_right = view.mapToGlobal(view.rect().topRight())
