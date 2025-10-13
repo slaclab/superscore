@@ -205,9 +205,12 @@ class TagEditor(QtWidgets.QWidget):
         list item containing both the tag index and name.
         """
         self.choice_list.clear()
-        for tag, string in choices.items():
-            self.choice_list.addItem(string)
-            item = self.choice_list.item(self.choice_list.count() - 1)
+        choices = [(tag, string) for tag, string in choices.items()]
+        # using addItems is significantly faster than addItem in the for-loop
+        self.choice_list.addItems([string for _, string in choices])
+        for i in range(self.choice_list.count()):
+            tag = choices[i][0]
+            item = self.choice_list.item(i)
             item.setData(QtCore.Qt.UserRole, tag)
 
     def show(self):
